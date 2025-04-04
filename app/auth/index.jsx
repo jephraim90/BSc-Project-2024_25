@@ -160,6 +160,7 @@ const AuthenticationScreen = () => {
                 ? "Sign up to start booking tables at your favorite restaurants" 
                 : "Log in to access your reservations and favorites"}
             </Text>
+            
 
             {error ? (
               <View style={styles.errorContainer}>

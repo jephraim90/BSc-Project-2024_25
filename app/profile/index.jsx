@@ -15,6 +15,7 @@ const Profile = () => {
       }
       setCheckedAuth(true);
     }
+    
   }, [user, authLoading]);
   if (authLoading || !checkedAuth) {
     return (

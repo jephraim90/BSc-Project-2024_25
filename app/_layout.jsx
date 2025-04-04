@@ -4,7 +4,8 @@ import NavBar from "../components/NavBar";
 
 
 export default function RootLayout() {
-  return (   
+  return (  
+     
      <SafeAreaView style={{ flex: 1 }}>
     <Stack screenOptions={{headerShown: false}} />
     

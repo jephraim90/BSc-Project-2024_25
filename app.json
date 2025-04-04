@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "dine_connect1.0",
-    "slug": "dine_connect1.0",
+    "slug": "dineconnect",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
@@ -17,7 +17,7 @@
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
       },
-    "package": "com.dineconnect.android"
+      "package": "com.dineconnect.android"
     },
     "web": {
       "bundler": "metro",
@@ -38,6 +38,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "b6411cf2-10ec-41ee-bdc9-9a5c104bd355"
+      }
+    },
+    "owner": "jcambia"
   }
 }

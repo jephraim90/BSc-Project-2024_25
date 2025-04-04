@@ -15,6 +15,7 @@ import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
 
+
 const FAVORITE_RESTAURANTS = [
   {
     id: "1",

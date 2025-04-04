@@ -8,6 +8,7 @@ const Details = () => {
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
   
+  
   // Sample restaurant data
   const restaurant = {
     id: '1',

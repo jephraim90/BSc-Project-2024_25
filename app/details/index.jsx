@@ -3,11 +3,11 @@ import React, { useState } from 'react';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
+
 const Details = () => {
   const router = useRouter();
   const [isFavorite, setIsFavorite] = useState(false);
   const [selectedTab, setSelectedTab] = useState('overview');
-  
   
   // Sample restaurant data
   const restaurant = {

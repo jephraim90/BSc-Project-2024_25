@@ -1,4 +1,4 @@
-
+// Load environment variables
 require('dotenv').config();
 
 const { initializeApp } = require('firebase/app');
@@ -20,7 +20,7 @@ envVars.forEach(varName => {
     console.log(`${varName} is missing`);
     missingVars = true;
   } else {
-
+   
     const value = process.env[varName];
     const maskedValue = value.substring(0, 3) + '...' + value.substring(value.length - 3);
     console.log(`${varName}: ${maskedValue}`);
@@ -47,7 +47,7 @@ console.log('\nVerifying Firebase config:');
 let configMissing = false;
 Object.entries(firebaseConfig).forEach(([key, value]) => {
   if (!value) {
-    console.log(` ${key} is missing in firebaseConfig`);
+    console.log(`${key} is missing in firebaseConfig`);
     configMissing = true;
   } else {
     console.log(`${key} is set`);
@@ -58,7 +58,6 @@ if (configMissing) {
   console.error('Firebase configuration is incomplete. Check your environment variables.');
   process.exit(1);
 }
-
 
 console.log('\nInitializing Firebase...');
 const app = initializeApp(firebaseConfig);
@@ -163,7 +162,7 @@ const restaurants = [
  
 ];
 
-
+// seed the database
 const seedRestaurants = async () => {
   try {
     console.log('\nStarting to seed restaurants...');
@@ -174,7 +173,7 @@ const seedRestaurants = async () => {
         const docRef = await addDoc(collection(db, "restaurants"), restaurant);
         console.log(`Added restaurant with ID: ${docRef.id}`);
       } catch (error) {
-        console.error(`Failed to add restaurant ${restaurant.name}:`, error);
+        console.error(` Failed to add restaurant ${restaurant.name}:`, error);
       }
     }
 

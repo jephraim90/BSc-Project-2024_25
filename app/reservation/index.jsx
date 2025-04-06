@@ -15,7 +15,6 @@ import {
   import { Ionicons } from '@expo/vector-icons';
   import { useRouter } from 'expo-router';
   
-  
   const Reservation = () => {
     const router = useRouter();
     const [date, setDate] = useState('');
@@ -23,6 +22,7 @@ import {
     const [guests, setGuests] = useState('2');
     const [specialRequests, setSpecialRequests] = useState('');
   
+    
     // Sample restaurant data
     const restaurant = {
       id: '1',
@@ -51,14 +51,14 @@ import {
         
         if (result.action === Share.sharedAction) {
           if (result.activityType) {
-           
+            
             console.log('Shared with activity type of: ' + result.activityType);
           } else {
-            // shared
+           
             console.log('Shared');
           }
         } else if (result.action === Share.dismissedAction) {
-          // dismissed
+          
           console.log('Share dismissed');
         }
       } catch (error) {
@@ -70,7 +70,7 @@ import {
     const handleReserve = () => {
       
       console.log('Reservation submitted', { date, time, guests, specialRequests });
-      // Navigate to confirmation page
+      
       router.push('/confirmation');
     };
   

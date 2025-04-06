@@ -23,6 +23,7 @@ import { useRouter } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import {useAuth} from '@/contexts/AuthContext';
 
+
 const AuthenticationScreen = () => {
   const router = useRouter();
   const { login, register } = useAuth();
@@ -49,7 +50,7 @@ const AuthenticationScreen = () => {
           cancelAction();
         }
       } else {
-        
+        // Simple alert without confirmation
         window.alert(`${title}\n\n${message}`);
       }
     } else {
@@ -132,7 +133,7 @@ const AuthenticationScreen = () => {
   }, []);
 
   useEffect(() => {
-    
+    // Reset error when switching between sign in and sign up
     setError(false);
   }, [isSigningUp]);
 
@@ -160,7 +161,6 @@ const AuthenticationScreen = () => {
                 ? "Sign up to start booking tables at your favorite restaurants" 
                 : "Log in to access your reservations and favorites"}
             </Text>
-            
 
             {error ? (
               <View style={styles.errorContainer}>

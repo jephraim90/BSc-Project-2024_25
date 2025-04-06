@@ -4,6 +4,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 
 
+
 const RestaurantsScreen = () => {
   const router = useRouter();
   return (
@@ -415,7 +416,7 @@ const RestaurantsScreen = () => {
           </View>
         </TouchableOpacity>
 
-            <View style={{ height: 20 }} />
+        <View style={{ height: 20 }} />
       </ScrollView>
       
  

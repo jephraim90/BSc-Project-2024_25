@@ -9,12 +9,12 @@ import {
   FlatList,
   ActivityIndicator,
 } from "react-native";
+
 import React from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { useState, useEffect } from "react";
-
 
 const FAVORITE_RESTAURANTS = [
   {
@@ -227,7 +227,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    backgroundColor: "#FFD700", // Default gold color
+    backgroundColor: "#FFD700", 
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderTopLeftRadius: 12,

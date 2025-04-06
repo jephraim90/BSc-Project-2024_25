@@ -1,22 +1,19 @@
-
 import { initializeApp } from 'firebase/app';
-import { getAuth } from 'firebase/auth'; // 
+import { getAuth } from 'firebase/auth'; 
 import { getFirestore } from 'firebase/firestore'; 
 import { getStorage } from 'firebase/storage'; 
 import { getFunctions } from 'firebase/functions';
 
-
 const firebaseConfig ={
-    apiKey : "AIzaSyA8ZM_HLMMsjyiuE43bm7OHLj4OixgHDUk",
-    authDomain : "dine-connect-13e1e.firebaseapp.com",
-    projectId : "dine-connect-13e1e",
-    storageBucket : "dine-connect-13e1e.firebasestorage.app",
-    messagingSenderId : "716906757983",
-    appId : "1:716906757983:web:1a7eee7b84d40a2d2140ea",
-    measurementId : "G-6EDPBTWZL4"
+    apiKey : process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
+    authDomain : process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
+    projectId : process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
+    storageBucket : process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
+    messagingSenderId : process.env.EXPO_PUBLIC_FIREBASE_MESSAGING_SENDER_ID,
+    appId : process.env.EXPO_PUBLIC_FIREBASE_APP_ID,
+    measurementId : process.env.EXPO_PUBLIC_FIREBASE_MEASUREMENT_ID
 
 }
-
 
 const app = initializeApp(firebaseConfig);
 export const auth = getAuth(app);

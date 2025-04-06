@@ -1,11 +1,9 @@
-require('dotenv').config();
-
-
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs } = require('firebase/firestore');
 
+
 const firebaseConfig = {
-  apiKey: "AIzaSyA8ZM_HLMMsjyiuE43bm7OHLj4OixgHDUk",
+  apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
   projectId: process.env.EXPO_PUBLIC_FIREBASE_PROJECT_ID,
   storageBucket: process.env.EXPO_PUBLIC_FIREBASE_STORAGE_BUCKET,
@@ -17,11 +15,11 @@ const firebaseConfig = {
 const checkEnvironment = async () => {
   console.log('Environment Check for Firebase/Firestore');
   console.log('======================================');
-  console.log('OPEN WEATHER API', process.env.EXPO_PUBLIC_OPENWEATHER_API_KEY)
-
-  console.log(`Node version: ${process.version}`);
   
  
+  console.log(`Node version: ${process.version}`);
+  
+
   console.log('\nPackage versions:');
   try {
     const firebasePkg = require('firebase/package.json');
@@ -29,7 +27,8 @@ const checkEnvironment = async () => {
   } catch (err) {
     console.log('firebase: Unable to determine version');
   }
-
+  
+ 
   console.log('\nEnvironment variables check:');
   
   const envVars = [
@@ -53,25 +52,25 @@ const checkEnvironment = async () => {
     }
   });
   
-
+ 
   console.log('\nTesting Firebase initialization:');
   try {
     const app = initializeApp(firebaseConfig);
-    console.log(' Firebase initialized successfully');
+    console.log('Firebase initialized successfully');
     
-  
+   e
     console.log('\nTesting Firestore connection:');
     const db = getFirestore(app);
     
     try {
-     
+   
       console.log('Attempting to read from Firestore...');
       const querySnapshot = await getDocs(collection(db, 'test-collection-that-probably-doesnt-exist'));
       console.log(`Firestore read successful. Found ${querySnapshot.size} documents.`);
     } catch (error) {
-  
+   
       if (error.code === 'not-found') {
-        console.log(' Firestore connection successful (collection not found, but that\'s expected)');
+        console.log('Firestore connection successful (collection not found, but that\'s expected)');
       } else {
         console.log('Firestore read error:', error.message);
         console.log('Error code:', error.code);

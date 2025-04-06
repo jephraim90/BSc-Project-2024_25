@@ -5,23 +5,21 @@ import {createUserWithEmailAndPassword,
 } from 'firebase/auth';
 import { doc, setDoc } from 'firebase/firestore';
 
-
-export const signUp = async (email, password) => {
-    try{
+export const signUp = async (email, password, role = 'user') => {
+    try {
         const userCredential = await createUserWithEmailAndPassword(auth, email, password);
-        // Create user document in Firestore
-        
-        await setDoc(doc(db, 'users', userCredential.user.uid), {
+               await setDoc(doc(db, 'users', userCredential.user.uid), {
             email: userCredential.user.email,
-            createdAt: new Date()
+            role: role, 
+            createdAt: new Date(),
         });
-        console.log('User signed up!');
-        return userCredential.user
+        
+        console.log('User signed up with role:', role);
+        return userCredential.user;
     } catch (error) {
         console.error('Error signing up:', error.message);
+        throw error;
     }
-
-
 }
 
 export const signIn = async (email, password) => {

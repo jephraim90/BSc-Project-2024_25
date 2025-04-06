@@ -4,9 +4,6 @@ import { Ionicons } from '@expo/vector-icons';
 import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from 'expo-router';
 
-
-
-
 const Reservations = () => {
   const router =useRouter();
   const [activeTab, setActiveTab] = useState('upcoming');
@@ -93,7 +90,8 @@ const Reservations = () => {
     },
   ];
   
-   const renderReservationItem = (reservation) => {
+
+  const renderReservationItem = (reservation) => {
     return (
       <TouchableOpacity key={reservation.id} style={styles.reservationCard}>
         <Image source={{ uri: reservation.image }} style={styles.restaurantImage} />
@@ -210,7 +208,7 @@ const Reservations = () => {
           </View>
         ) : null}
         
-
+     
         <View style={{ height: 20 }} />
       </ScrollView>
       

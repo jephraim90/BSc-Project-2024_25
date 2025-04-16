@@ -1,3 +1,4 @@
+
 import { 
     collection, 
     doc, 
@@ -13,8 +14,9 @@ import {
     serverTimestamp
   } from "firebase/firestore";
   import { db } from "../services/firebaseConfig";
-    const databaseService = {
   
+  const databaseService = {
+
     async createDocument(collectionName, data) {
       try {
         // Add timestamps
@@ -39,8 +41,7 @@ import {
         };
       }
     },
-  
- 
+
     async getDocuments(collectionName, queryConstraints = []) {
       try {
         let q;
@@ -75,7 +76,6 @@ import {
         };
       }
     },
-  
 
     async getDocumentById(collectionName, documentId) {
       try {
@@ -104,7 +104,6 @@ import {
         };
       }
     },
-  
 
     async updateDocument(collectionName, documentId, data) {
       try {
@@ -129,7 +128,6 @@ import {
         };
       }
     },
-  
 
     async deleteDocument(collectionName, documentId) {
       try {
@@ -148,14 +146,11 @@ import {
       }
     },
   
-    /**
-     * Query builder helper functions
-     */
     queries: {
-
+    
       where: (field, operator, value) => where(field, operator, value),
       
-
+     
       orderBy: (field, direction = 'asc') => orderBy(field, direction),
       
     

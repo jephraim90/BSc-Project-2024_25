@@ -25,11 +25,10 @@ const AddRestaurant = () => {
     title,
     message,
     buttons = [], // Array of { text, onPress }
-    
     options = {}
   ) => {
     if (Platform.OS === "web") {
-      // Web implementation
+      // Web implementation 
       const buttonLabels = buttons.map(b => b.text).join(' / ');
       const confirmation = window.confirm(
         `${title}\n\n${message}\n\n${buttonLabels}`

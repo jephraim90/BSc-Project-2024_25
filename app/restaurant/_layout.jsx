@@ -3,7 +3,6 @@ import { AuthProvider } from '@/contexts/AuthContext';
 
 export default function RestaurantLayout() {
   return (
-    
     <AuthProvider>
       <Stack>
         <Stack.Screen
@@ -12,7 +11,12 @@ export default function RestaurantLayout() {
             headerShown: false,
           }}
         />
-      
+      <Stack.Screen
+          name="edit"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
     </AuthProvider>
   );

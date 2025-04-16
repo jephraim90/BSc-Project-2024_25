@@ -11,7 +11,7 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Fetch Firestore user data and merge with auth user
+ 
   const fetchUserWithRole = async (authUser) => {
     if (!authUser) return null;
     
@@ -27,7 +27,7 @@ export const AuthProvider = ({ children }) => {
       return {
         uid: authUser.uid,
         email: authUser.email,
-        role: 'user' // defult role
+        role: 'user' // defultrole
       };
     }
   };

@@ -2,6 +2,7 @@ import { View, Text , SafeAreaView,} from 'react-native'
 import React from 'react'
 import { Tabs } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
+
 const TabBar = () => {
   return (
     <Tabs
@@ -16,7 +17,7 @@ const TabBar = () => {
         tabBarInactiveTintColor: '#888', 
         tabBarLabelStyle: {
           fontSize: 12, 
-          marginTop: 2, 
+          marginTop: 2,
         },
       }}
     >
@@ -37,7 +38,7 @@ const TabBar = () => {
           tabBarIcon: ({ color, size }) => (
             <Ionicons name="search-outline" size={size} color={color} />
           ),
-          headerTitle: 'Restaurants',
+          headerTitle: 'Restaurants', 
         }}
       />
       <Tabs.Screen

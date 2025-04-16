@@ -4,7 +4,6 @@ import React from 'react'
 import { useAuth,AuthProvider} from '@/contexts/AuthContext';
 
 
-
 const FavouritesLayout = () => {
  
   return (

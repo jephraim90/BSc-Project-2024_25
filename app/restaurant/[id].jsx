@@ -12,7 +12,6 @@ const RestaurantDetails = () => {
   const [activeTab, setActiveTab] = useState('overview');
   const [isFavorite, setIsFavorite] = useState(false);
   
-  
   useEffect(() => {
     const fetchRestaurantDetails = async () => {
       try {
@@ -143,7 +142,7 @@ const RestaurantDetails = () => {
               <Text style={styles.reviewCount}>Based on {restaurant.reviews} reviews</Text>
             </View>
             
-            {/* Previous reviews */}
+            {/* Review List */}
             <Text style={styles.emptyStateText}>No reviews yet. Be the first to review!</Text>
             
             <TouchableOpacity style={styles.writeReviewButton}>

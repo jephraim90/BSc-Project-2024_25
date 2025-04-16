@@ -2,6 +2,7 @@ import { Text, View, ScrollView, ImageBackground, TouchableOpacity, Image, SafeA
 import { StyleSheet } from "react-native";
 import { useRouter } from "expo-router";
 
+
 export default function Index() {
   const router = useRouter();
   return (

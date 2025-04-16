@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Image
 } from 'react-native';
-
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import RestaurantService from '@/services/restaurantService';
@@ -54,7 +53,7 @@ const EditRestaurant = () => {
         
         setRestaurant(data);
         
-        // if user has permission to edit this restaurant
+        // Check if user has permission to edit this restaurant
         const isOwner = data.ownerId === user?.uid;
         const isAdmin = user?.role === 'admin';
         
@@ -118,11 +117,11 @@ const EditRestaurant = () => {
         phone,
         specialties: specialties.split(',').map(item => item.trim()).filter(item => item),
         images: imageUrl ? [imageUrl] : [],
-        
+       
         updatedAt: new Date().toISOString(),
       };
       
-      // Update restaurant in database
+      // Update restaurant 
       const result = await RestaurantService.updateRestaurant(id, updatedData);
       
       if (result.success) {
@@ -329,7 +328,7 @@ const EditRestaurant = () => {
             </TouchableOpacity>
           </View>
           
-          {/* Advanced Options */}
+          {/* Advanced Options*/}
           <TouchableOpacity 
             style={styles.advancedOptionsButton}
             onPress={() => router.push(`/restaurant/edit/menu/${id}`)}

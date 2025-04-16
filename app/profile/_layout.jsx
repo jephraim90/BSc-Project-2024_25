@@ -13,8 +13,7 @@ const HeaderLogout = () => {
     router.replace('/auth'); // Redirect to auth screen
   };
   
-  
-  // Show button only if user is logged in
+  // show button only if user is logged in
   return user ? (
     <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
       <Ionicons name="log-out-outline" size={20} color="#1a1a1a" style={styles.logoutIcon} />

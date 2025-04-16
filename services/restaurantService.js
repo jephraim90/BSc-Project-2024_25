@@ -1,7 +1,8 @@
 import databaseService from '../services/databaseService';
 
+
 const RestaurantService = {
- 
+  
   async addRestaurant(restaurantData) {
     const result = await databaseService.createDocument('restaurants', restaurantData);
     
@@ -18,9 +19,10 @@ const RestaurantService = {
     const result = await databaseService.getDocuments('restaurants');
     return result.data;
   },
-
+  
+  
   async getFilteredRestaurants(cuisine, minRating, limit = 10) {
-    // query constraints
+    // Build query constraints
     const queryConstraints = [
       databaseService.queries.where('cuisine', '==', cuisine),
       databaseService.queries.where('rating', '>=', minRating),
@@ -31,7 +33,8 @@ const RestaurantService = {
     const result = await databaseService.getDocuments('restaurants', queryConstraints);
     return result.data;
   },
-
+  
+ 
   async getRestaurantById(id) {
     const result = await databaseService.getDocumentById('restaurants', id);
     
@@ -42,8 +45,7 @@ const RestaurantService = {
     
     return result.data;
   },
-  
-
+ 
   async updateRestaurant(id, updatedData) {
     const result = await databaseService.updateDocument('restaurants', id, updatedData);
     

@@ -22,7 +22,6 @@ import {
     const [guests, setGuests] = useState('2');
     const [specialRequests, setSpecialRequests] = useState('');
   
-    
     // Sample restaurant data
     const restaurant = {
       id: '1',
@@ -54,7 +53,7 @@ import {
             
             console.log('Shared with activity type of: ' + result.activityType);
           } else {
-           
+          
             console.log('Shared');
           }
         } else if (result.action === Share.dismissedAction) {
@@ -70,7 +69,7 @@ import {
     const handleReserve = () => {
       
       console.log('Reservation submitted', { date, time, guests, specialRequests });
-      
+      // Navigate to confirmation page
       router.push('/confirmation');
     };
   

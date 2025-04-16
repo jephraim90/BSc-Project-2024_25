@@ -8,5 +8,4 @@ const RestaurantLayout = () => {
   )
 }
 
-
 export default RestaurantLayout

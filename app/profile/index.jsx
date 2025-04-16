@@ -13,7 +13,6 @@ import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import RestaurantService from "../../services/restaurantService";
 
-
 const Profile = () => {
   const router = useRouter();
   const { user, loading: authLoading } = useAuth();
@@ -36,7 +35,7 @@ const Profile = () => {
     );
   }
 
-  // Function to render content based on user role
+  // render content based on user role
   const renderRoleBasedContent = () => {
     switch (user?.role) {
       case "admin":

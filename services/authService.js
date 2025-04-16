@@ -35,7 +35,11 @@ export const signIn = async (email, password) => {
     }
 }
 
-
+/**
+ * Subscribe to changes in the user's authentication state.
+ * @param {Function} callback The callback to be called when the user's authentication state changes.
+ * @returns {Function} A function that can be called to unsubscribe from the changes.
+ */
 export const subscribeToAuthChanges = (callback)=>{
     return onAuthStateChanged(auth,(user)=>{
         callback(user)

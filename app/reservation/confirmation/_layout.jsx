@@ -2,12 +2,14 @@ import { View, Text } from 'react-native'
 import React from 'react'
 import { Stack } from 'expo-router'
 import { AuthProvider } from '@/contexts/AuthContext';
-const AuthenticationLayout = () => {
+
+
+const confirmationLayout = () => {
   return (
     <AuthProvider>
     <Stack screenOptions={{headerShown: false}} />
-    </AuthProvider>
+     </AuthProvider>
   )
 }
 
-export default AuthenticationLayout
+export default confirmationLayout

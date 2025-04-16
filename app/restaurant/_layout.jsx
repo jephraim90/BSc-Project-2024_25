@@ -17,6 +17,18 @@ export default function RestaurantLayout() {
             headerShown: false,
           }}
         />
+         <Stack.Screen
+          name="[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="reserve"
+          options={{
+            headerShown: false,
+          }}
+        />
       </Stack>
     </AuthProvider>
   );

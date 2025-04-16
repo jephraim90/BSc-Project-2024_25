@@ -4,6 +4,7 @@ require('dotenv').config();
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, addDoc } = require('firebase/firestore');
 
+// Log environment variables to verify they're loaded (without exposing sensitive values)
 console.log('Environment variables check:');
 const envVars = [
   'EXPO_PUBLIC_FIREBASE_API_KEY',
@@ -20,10 +21,10 @@ envVars.forEach(varName => {
     console.log(`${varName} is missing`);
     missingVars = true;
   } else {
-   
+    // Show first 3 and last 3 characters only for security
     const value = process.env[varName];
     const maskedValue = value.substring(0, 3) + '...' + value.substring(value.length - 3);
-    console.log(`${varName}: ${maskedValue}`);
+    console.log(` ${varName}: ${maskedValue}`);
   }
 });
 
@@ -32,7 +33,7 @@ if (missingVars) {
   process.exit(1);
 }
 
-
+// Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -42,7 +43,7 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-
+// Verify Firebase config has values
 console.log('\nVerifying Firebase config:');
 let configMissing = false;
 Object.entries(firebaseConfig).forEach(([key, value]) => {
@@ -50,7 +51,7 @@ Object.entries(firebaseConfig).forEach(([key, value]) => {
     console.log(`${key} is missing in firebaseConfig`);
     configMissing = true;
   } else {
-    console.log(`${key} is set`);
+    console.log(` ${key} is set`);
   }
 });
 
@@ -59,11 +60,13 @@ if (configMissing) {
   process.exit(1);
 }
 
+// Initialize Firebase
 console.log('\nInitializing Firebase...');
 const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 console.log('Firebase initialized successfully');
 
+// Sample restaurant data 
 const restaurants = [
   {
     name: 'La Trattoria Italiana',
@@ -159,10 +162,10 @@ const restaurants = [
       }
     ]
   }
- 
+  
 ];
 
-// seed the database
+// Function to seed the database
 const seedRestaurants = async () => {
   try {
     console.log('\nStarting to seed restaurants...');
@@ -171,9 +174,9 @@ const seedRestaurants = async () => {
       try {
         console.log(`Adding restaurant: ${restaurant.name}`);
         const docRef = await addDoc(collection(db, "restaurants"), restaurant);
-        console.log(`Added restaurant with ID: ${docRef.id}`);
+        console.log(` Added restaurant with ID: ${docRef.id}`);
       } catch (error) {
-        console.error(` Failed to add restaurant ${restaurant.name}:`, error);
+        console.error(`Failed to add restaurant ${restaurant.name}:`, error);
       }
     }
 
@@ -183,5 +186,5 @@ const seedRestaurants = async () => {
   }
 };
 
-
+// Run the seeding function
 seedRestaurants();

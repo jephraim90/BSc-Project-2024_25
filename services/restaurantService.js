@@ -1,6 +1,8 @@
+// Usage examples for databaseService
+
 import databaseService from '../services/databaseService';
 
-
+// Example component or service that uses the database service
 const RestaurantService = {
   
   async addRestaurant(restaurantData) {
@@ -14,7 +16,10 @@ const RestaurantService = {
       throw new Error(result.error);
     }
   },
-
+  
+  /**
+   * Get all restaurants
+   */
   async getAllRestaurants() {
     const result = await databaseService.getDocuments('restaurants');
     return result.data;

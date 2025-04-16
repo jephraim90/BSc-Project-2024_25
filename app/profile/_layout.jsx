@@ -11,9 +11,8 @@ const HeaderLogout = () => {
   const handleLogout = async () => {
     await logout();
     router.replace('/auth'); // Redirect to auth screen
-  };
-  
-  // show button only if user is logged in
+  };  
+  // Show button only if user is logged in
   return user ? (
     <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
       <Ionicons name="log-out-outline" size={20} color="#1a1a1a" style={styles.logoutIcon} />
@@ -47,7 +46,7 @@ const ProfileLayout = () => {
         <Stack.Screen
           name="index"
           options={{
-            headerTitle: '', 
+            headerTitle: '',
             headerBackVisible: false
           }}
         />

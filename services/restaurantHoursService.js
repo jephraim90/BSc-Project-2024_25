@@ -1,8 +1,12 @@
-
 import databaseService from './databaseService';
 
 const RestaurantHoursService = {
-  
+  /**
+   * Update restaurant business hours
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {object} hoursData - Business hours data
+   * @returns {Promise<object>} Result of the operation
+   */
   async updateBusinessHours(restaurantId, hoursData) {
     try {
       // Validate input data
@@ -35,7 +39,11 @@ const RestaurantHoursService = {
     }
   },
   
-  
+  /**
+   * Get restaurant business hours
+   * @param {string} restaurantId - ID of the restaurant
+   * @returns {Promise<object>} Business hours data
+   */
   async getBusinessHours(restaurantId) {
     try {
       const result = await databaseService.getDocumentById('restaurants', restaurantId);
@@ -59,13 +67,18 @@ const RestaurantHoursService = {
     }
   },
   
-
+  /**
+   * Add or update special hours for a specific date
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {object} specialHoursData - Special hours data
+   * @returns {Promise<object>} Result of the operation
+   */
   async addSpecialHours(restaurantId, specialHoursData) {
     try {
       // Validate special hours data
       this.validateSpecialHours(specialHoursData);
       
-      // get the current restaurant data
+      // First get the current restaurant data
       const result = await databaseService.getDocumentById('restaurants', restaurantId);
       
       if (!result.success) {
@@ -95,7 +108,7 @@ const RestaurantHoursService = {
       // Sort by date
       restaurant.specialHours.sort((a, b) => new Date(a.date) - new Date(b.date));
       
-      // Remove any past dates 
+      // Remove any past dates (optional)
       const today = new Date();
       today.setHours(0, 0, 0, 0);
       
@@ -130,10 +143,15 @@ const RestaurantHoursService = {
     }
   },
   
-
+  /**
+   * Delete special hours for a specific date
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {string} date - Date string (YYYY-MM-DD)
+   * @returns {Promise<object>} Result of the operation
+   */
   async deleteSpecialHours(restaurantId, date) {
     try {
-      // current restaurant data
+      // First get the current restaurant data
       const result = await databaseService.getDocumentById('restaurants', restaurantId);
       
       if (!result.success) {
@@ -182,7 +200,11 @@ const RestaurantHoursService = {
     }
   },
   
-
+  /**
+   * Get all special hours for a restaurant
+   * @param {string} restaurantId - ID of the restaurant
+   * @returns {Promise<object>} Special hours data
+   */
   async getSpecialHours(restaurantId) {
     try {
       const result = await databaseService.getDocumentById('restaurants', restaurantId);
@@ -219,7 +241,13 @@ const RestaurantHoursService = {
     }
   },
   
- 
+  /**
+   * Check if a restaurant is open at a specific time
+   * @param {object} businessHours - Business hours data
+   * @param {Array} specialHours - Special hours data
+   * @param {Date} date - Date object to check (defaults to current time)
+   * @returns {object} Status and hours information
+   */
   isOpenAt(businessHours, specialHours = [], date = new Date()) {
     // Format date as YYYY-MM-DD for comparison with special hours
     const dateString = this.formatDateYYYYMMDD(date);
@@ -248,7 +276,7 @@ const RestaurantHoursService = {
       );
     }
     
-    // if no special hours, use regular business hours
+    // No special hours, use regular business hours
     const dayOfWeek = this.getDayOfWeek(date);
     const dayHours = businessHours?.[dayOfWeek];
     
@@ -271,7 +299,14 @@ const RestaurantHoursService = {
     );
   },
   
-
+  /**
+   * Gets the next open time for a restaurant
+   * @param {object} businessHours - Business hours data
+   * @param {Array} specialHours - Special hours data
+   * @param {Date} startDate - Date object to start checking from (defaults to current time)
+   * @param {number} maxDaysToCheck - Maximum number of days to look ahead
+   * @returns {object|null} Next open time info or null if not found within time range
+   */
   getNextOpenTime(businessHours, specialHours = [], startDate = new Date(), maxDaysToCheck = 7) {
     const currentDate = new Date(startDate);
     
@@ -314,7 +349,14 @@ const RestaurantHoursService = {
     return null;
   },
   
- 
+  /**
+   * Check if a time is within a range
+   * @param {Date} date - Date object to check
+   * @param {string} openTime - Opening time (HH:MM)
+   * @param {string} closeTime - Closing time (HH:MM)
+   * @param {string|null} note - Optional note
+   * @returns {object} Status object
+   */
   checkTimeInRange(date, openTime, closeTime, note) {
     const [openHour, openMinute] = openTime.split(':').map(Number);
     const [closeHour, closeMinute] = closeTime.split(':').map(Number);
@@ -378,26 +420,44 @@ const RestaurantHoursService = {
     }
   },
   
-
+  /**
+   * Format a time for display
+   * @param {number} hours - Hours
+   * @param {number} minutes - Minutes
+   * @returns {string} Formatted time
+   */
   formatTime(hours, minutes) {
     const period = hours >= 12 ? 'PM' : 'AM';
     const displayHours = hours % 12 === 0 ? 12 : hours % 12;
     return `${displayHours}:${minutes.toString().padStart(2, '0')} ${period}`;
   },
   
-
+  /**
+   * Convert formatted time string to minutes since midnight
+   * @param {string} timeStr - Time string in HH:MM format
+   * @returns {number} Minutes since midnight
+   */
   timeToMinutes(timeStr) {
     if (!timeStr) return 0;
     const [hours, minutes] = timeStr.split(':').map(Number);
     return hours * 60 + minutes;
   },
-
+  
+  /**
+   * Get day of week from date
+   * @param {Date} date - Date object
+   * @returns {string} Day of week (lowercase)
+   */
   getDayOfWeek(date) {
     const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
     return days[date.getDay()];
   },
   
-
+  /**
+   * Format date as YYYY-MM-DD
+   * @param {Date} date - Date object
+   * @returns {string} Formatted date
+   */
   formatDateYYYYMMDD(date) {
     const year = date.getFullYear();
     const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -405,7 +465,10 @@ const RestaurantHoursService = {
     return `${year}-${month}-${day}`;
   },
   
-  
+  /**
+   * Generate default business hours
+   * @returns {object} Default hours
+   */
   generateDefaultHours() {
     return {
       monday: { isOpen: true, opens: '09:00', closes: '22:00' },
@@ -418,7 +481,11 @@ const RestaurantHoursService = {
     };
   },
   
- 
+  /**
+   * Validate business hours data
+   * @param {object} hoursData - Business hours data
+   * @throws {Error} If validation fails
+   */
   validateBusinessHours(hoursData) {
     const requiredDays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'];
     
@@ -451,7 +518,11 @@ const RestaurantHoursService = {
     }
   },
   
-
+  /**
+   * Validate special hours data
+   * @param {object} specialHoursData - Special hours data
+   * @throws {Error} If validation fails
+   */
   validateSpecialHours(specialHoursData) {
     if (!specialHoursData.date || !this.isValidDateFormat(specialHoursData.date)) {
       throw new Error('Invalid date format. Use YYYY-MM-DD format.');
@@ -478,17 +549,27 @@ const RestaurantHoursService = {
         throw new Error('Closing time must be after opening time');
       }
     }
-
+    
+    // Note is optional, but if provided should be a string
     if (specialHoursData.note !== undefined && specialHoursData.note !== null && typeof specialHoursData.note !== 'string') {
       throw new Error('Note must be a string');
     }
   },
-
+  
+  /**
+   * Check if a string is a valid time format (HH:MM)
+   * @param {string} timeStr - Time string
+   * @returns {boolean} True if valid
+   */
   isValidTimeFormat(timeStr) {
     return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
   },
   
-
+  /**
+   * Check if a string is a valid date format (YYYY-MM-DD)
+   * @param {string} dateStr - Date string
+   * @returns {boolean} True if valid
+   */
   isValidDateFormat(dateStr) {
     return /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
   }

@@ -79,7 +79,7 @@ const EditRestaurantSpecialHours = () => {
         
         // Initialize special hours if available
         if (data.specialHours) {
-          // transform dates from strings to Date objects for the component
+          // Transform dates from strings to Date objects for the component
           const formattedSpecialHours = data.specialHours.map(item => ({
             ...item,
             dateObj: new Date(item.date)
@@ -331,7 +331,7 @@ const EditRestaurantSpecialHours = () => {
     setShowDatePicker(Platform.OS === 'ios');
     
     if (date) {
-      // make sure time is set to start of day to avoid timezone issues
+      // Make sure time is set to start of day to avoid timezone issues
       date.setHours(0, 0, 0, 0);
       setSelectedDate(date);
       

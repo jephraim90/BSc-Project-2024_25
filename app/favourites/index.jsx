@@ -77,7 +77,7 @@ const FAVORITE_RESTAURANTS = [
     image:
       "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
     badge: "Most Popular",
-    badgeColor: "#9370DB", 
+    badgeColor: "#9370DB", // Medium purple
   },
   {
     id: "6",
@@ -90,7 +90,7 @@ const FAVORITE_RESTAURANTS = [
     image:
       "https://images.unsplash.com/photo-1515668236457-83c3b8764839?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
     badge: "New Addition",
-    badgeColor: "#20B2AA", 
+    badgeColor: "#20B2AA", // Light sea green
   },
   {
     id: "7",
@@ -124,7 +124,7 @@ const Favourites = () => {
         <ActivityIndicator size="large" color="#007bff" />
       </View>
     );
-  } 
+  } // this useEffect should run when there is a change in either user or authLoading
 
   if (user) {
     console.log("User Details:", user);
@@ -226,7 +226,7 @@ export const styles = StyleSheet.create({
     position: "absolute",
     top: 0,
     left: 0,
-    backgroundColor: "#FFD700", 
+    backgroundColor: "#FFD700", // Default gold color
     paddingHorizontal: 8,
     paddingVertical: 4,
     borderTopLeftRadius: 12,

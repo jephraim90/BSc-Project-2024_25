@@ -9,38 +9,120 @@ import {
     SafeAreaView,
     Share,
     Platform,
-    KeyboardAvoidingView
+    KeyboardAvoidingView,
+    ActivityIndicator,
+    Alert
   } from 'react-native';
-  import React, { useState } from 'react';
+  import React, { useState, useEffect } from 'react';
   import { Ionicons } from '@expo/vector-icons';
-  import { useRouter } from 'expo-router';
+  import { useRouter, useLocalSearchParams } from 'expo-router';
+  import RestaurantService from '@/services/restaurantService';
+  import { useAuth } from '@/contexts/AuthContext';
+  import databaseService from '@/services/databaseService';
   
   const Reservation = () => {
     const router = useRouter();
+    const { id } = useLocalSearchParams(); // Get restaurant ID from URL params
+    const { user } = useAuth(); // Get current user from auth context
+    
+    // State for restaurant data
+    const [restaurant, setRestaurant] = useState(null);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState(null);
+    
+    // Reservation state
     const [date, setDate] = useState('');
     const [time, setTime] = useState('');
     const [guests, setGuests] = useState('2');
     const [specialRequests, setSpecialRequests] = useState('');
+    const [availableTimes, setAvailableTimes] = useState([]);
+    const [submitting, setSubmitting] = useState(false);
   
-    // Sample restaurant data
-    const restaurant = {
-      id: '1',
-      name: 'La Trattoria Italiana',
-      image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
-      address: '123 Venice Street, Venice, 30122',
+    // Fetch restaurant data
+    useEffect(() => {
+      const fetchRestaurantData = async () => {
+        try {
+          setLoading(true);
+          if (!id) {
+            throw new Error('Restaurant ID is required');
+          }
+          
+          const restaurantData = await RestaurantService.getRestaurantById(id);
+          if (!restaurantData) {
+            throw new Error('Restaurant not found');
+          }
+          
+          setRestaurant(restaurantData);
+          
+          // Generate available dates and times based on restaurant's business hours
+          generateAvailableTimes(restaurantData);
+        } catch (err) {
+          console.error('Error fetching restaurant:', err);
+          setError(err.message || 'Failed to load restaurant');
+        } finally {
+          setLoading(false);
+        }
+      };
+  
+      fetchRestaurantData();
+    }, [id]);
+  
+    // Generate available dates for next 7 days
+    const generateAvailableDates = () => {
+      const dates = [];
+      const today = new Date();
+      
+      for (let i = 0; i < 7; i++) {
+        const date = new Date();
+        date.setDate(today.getDate() + i);
+        
+        let label;
+        if (i === 0) {
+          label = 'Today';
+        } else if (i === 1) {
+          label = 'Tomorrow';
+        } else {
+          label = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
+        }
+        
+        // Add date object to allow easier comparison and formatting later
+        dates.push({
+          label,
+          date,
+          value: date.toISOString().split('T')[0] // YYYY-MM-DD format
+        });
+      }
+      
+      return dates;
     };
-     // Sample available times
-    const availableTimes = [
-      '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM'
-    ];
   
-    // Sample available dates
-    const availableDates = [
-      'Today', 'Tomorrow', 'Fri, May 12', 'Sat, May 13', 'Sun, May 14'
-    ];
+    // Generate available time slots based on restaurant's business hours
+    const generateAvailableTimes = (restaurantData) => {
+      // This is a simplified implementation - a real app would check actual availability
+      // against existing reservations and time slots
+      
+      const defaultTimes = [
+        '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', 
+        '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM'
+      ];
+      
+      // If restaurant has business hours, use them to generate available times
+      if (restaurantData?.businessHours) {
+        // This would be more complex in a real app, checking the day of week
+        // and generating times within the restaurant's opening hours
+        // For now, we'll just use the default times
+      }
+      
+      setAvailableTimes(defaultTimes);
+    };
+  
+    // Available dates
+    const availableDates = generateAvailableDates();
   
     // Handle share reservation
     const handleShare = async () => {
+      if (!restaurant) return;
+      
       try {
         const result = await Share.share({
           message: `I'm going to ${restaurant.name} on ${date} at ${time} for ${guests} people! Join me!`,
@@ -49,14 +131,11 @@ import {
         
         if (result.action === Share.sharedAction) {
           if (result.activityType) {
-            // shared with activity type of result.activityType
             console.log('Shared with activity type of: ' + result.activityType);
           } else {
-            // shared
             console.log('Shared');
           }
         } else if (result.action === Share.dismissedAction) {
-          // dismissed
           console.log('Share dismissed');
         }
       } catch (error) {
@@ -65,12 +144,111 @@ import {
     };
   
     // Handle reservation submission
-    const handleReserve = () => {
-      // In a real app, this would send the reservation to your backend
-      console.log('Reservation submitted', { date, time, guests, specialRequests });
-      // Redirect to the confirmation page
-      router.push('/confirmation');
+    const handleReserve = async () => {
+      if (!restaurant || !date || !time || !user) {
+        Alert.alert('Error', 'Please fill in all required fields');
+        return;
+      }
+      
+      try {
+        setSubmitting(true);
+        
+        // Format date for storage
+        const selectedDateObj = availableDates.find(d => d.label === date)?.date || new Date();
+        const formattedDate = selectedDateObj.toISOString().split('T')[0]; // YYYY-MM-DD
+        
+        // Create reservation data
+        const reservationData = {
+          restaurantId: restaurant.id,
+          restaurantName: restaurant.name,
+          userId: user.uid,
+          userName: user.displayName || 'Guest',
+          userEmail: user.email,
+          date: formattedDate,
+          time,
+          guests: parseInt(guests),
+          specialRequests: specialRequests.trim() || null,
+          status: 'confirmed', // Options: confirmed, pending, cancelled, completed
+          createdAt: new Date().toISOString()
+        };
+        
+        // Save reservation to database
+        const result = await databaseService.createDocument('reservations', reservationData);
+        
+        if (result.success) {
+          // Navigate to confirmation page with reservation ID
+          router.push({
+            pathname: '/reservation/confirmation',
+            params: { 
+              reservationId: result.id,
+              restaurantName: restaurant.name,
+              date: date,
+              time: time,
+              guests: guests
+            }
+          });
+        } else {
+          throw new Error(result.error || 'Failed to create reservation');
+        }
+      } catch (err) {
+        console.error('Error creating reservation:', err);
+        Alert.alert('Error', err.message || 'Failed to create reservation. Please try again.');
+      } finally {
+        setSubmitting(false);
+      }
     };
+  
+    // Render loading state
+    if (loading) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.loadingContainer}>
+            <ActivityIndicator size="large" color="#1a1a1a" />
+            <Text style={styles.loadingText}>Loading restaurant details...</Text>
+          </View>
+        </SafeAreaView>
+      );
+    }
+  
+    // Render error state
+    if (error) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="alert-circle-outline" size={64} color="#e53935" />
+            <Text style={styles.errorTitle}>Oops!</Text>
+            <Text style={styles.errorText}>{error}</Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => router.back()}
+            >
+              <Text style={styles.retryButtonText}>Go Back</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
+  
+    // If user is not logged in, show login prompt
+    if (!user) {
+      return (
+        <SafeAreaView style={styles.container}>
+          <View style={styles.errorContainer}>
+            <Ionicons name="person-circle-outline" size={64} color="#1a1a1a" />
+            <Text style={styles.errorTitle}>Login Required</Text>
+            <Text style={styles.errorText}>
+              You need to be logged in to make a reservation.
+            </Text>
+            <TouchableOpacity 
+              style={styles.retryButton}
+              onPress={() => router.push('/auth')}
+            >
+              <Text style={styles.retryButtonText}>Login / Sign Up</Text>
+            </TouchableOpacity>
+          </View>
+        </SafeAreaView>
+      );
+    }
   
     return (
       <SafeAreaView style={styles.container}>
@@ -92,13 +270,25 @@ import {
   
             {/* Restaurant Info */}
             <View style={styles.restaurantCard}>
-              <Image source={{ uri: restaurant.image }} style={styles.restaurantImage} />
+              <Image 
+                source={{ 
+                  uri: restaurant?.images?.[0] || 
+                       'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80' 
+                }} 
+                style={styles.restaurantImage} 
+              />
               <View style={styles.restaurantInfo}>
-                <Text style={styles.restaurantName}>{restaurant.name}</Text>
+                <Text style={styles.restaurantName}>{restaurant?.name}</Text>
                 <View style={styles.addressContainer}>
                   <Ionicons name="location-outline" size={16} color="#666" />
-                  <Text style={styles.addressText}>{restaurant.address}</Text>
+                  <Text style={styles.addressText}>{restaurant?.address}</Text>
                 </View>
+                {restaurant?.rating && (
+                  <View style={styles.ratingContainer}>
+                    <Ionicons name="star" size={16} color="#FFD700" />
+                    <Text style={styles.ratingText}>{restaurant.rating.toFixed(1)}</Text>
+                  </View>
+                )}
               </View>
             </View>
   
@@ -115,17 +305,17 @@ import {
                     key={index} 
                     style={[
                       styles.dateItem,
-                      date === item && styles.selectedDateItem
+                      date === item.label && styles.selectedDateItem
                     ]}
-                    onPress={() => setDate(item)}
+                    onPress={() => setDate(item.label)}
                   >
                     <Text 
                       style={[
                         styles.dateText,
-                        date === item && styles.selectedDateText
+                        date === item.label && styles.selectedDateText
                       ]}
                     >
-                      {item}
+                      {item.label}
                     </Text>
                   </TouchableOpacity>
                 ))}
@@ -172,14 +362,28 @@ import {
                 <TextInput
                   style={styles.guestsInput}
                   value={guests}
-                  onChangeText={setGuests}
+                  onChangeText={text => {
+                    // Only allow numbers
+                    const numericValue = text.replace(/[^0-9]/g, '');
+                    // Limit to reasonable party size
+                    if (numericValue === '' || parseInt(numericValue) === 0) {
+                      setGuests('1');
+                    } else if (parseInt(numericValue) > 20) {
+                      setGuests('20');
+                    } else {
+                      setGuests(numericValue);
+                    }
+                  }}
                   keyboardType="number-pad"
                   maxLength={2}
                 />
                 
                 <TouchableOpacity 
                   style={styles.guestButton}
-                  onPress={() => setGuests(prev => (parseInt(prev) + 1).toString())}
+                  onPress={() => setGuests(prev => {
+                    const newValue = parseInt(prev) + 1;
+                    return newValue > 20 ? '20' : newValue.toString();
+                  })}
                 >
                   <Ionicons name="add" size={20} color="#1a1a1a" />
                 </TouchableOpacity>
@@ -196,7 +400,11 @@ import {
                 multiline
                 value={specialRequests}
                 onChangeText={setSpecialRequests}
+                maxLength={200}
               />
+              <Text style={styles.characterCount}>
+                {specialRequests.length}/200 characters
+              </Text>
             </View>
   
             {/* Reservation Summary */}
@@ -228,18 +436,23 @@ import {
             <TouchableOpacity 
               style={[
                 styles.reserveButton,
-                (!date || !time) && styles.disabledButton
+                (!date || !time || submitting) && styles.disabledButton
               ]}
               onPress={handleReserve}
-              disabled={!date || !time}
+              disabled={!date || !time || submitting}
             >
-              <Text style={styles.reserveButtonText}>Confirm Reservation</Text>
+              {submitting ? (
+                <ActivityIndicator color="#FFFFFF" size="small" />
+              ) : (
+                <Text style={styles.reserveButtonText}>Confirm Reservation</Text>
+              )}
             </TouchableOpacity>
             
             {/* Cancel Button */}
             <TouchableOpacity 
               style={styles.cancelButton}
               onPress={() => router.back()}
+              disabled={submitting}
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
@@ -262,6 +475,47 @@ import {
     container: {
       flex: 1,
       backgroundColor: '#ffffff',
+    },
+    loadingContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    loadingText: {
+      marginTop: 12,
+      fontSize: 16,
+      color: '#666',
+    },
+    errorContainer: {
+      flex: 1,
+      justifyContent: 'center',
+      alignItems: 'center',
+      padding: 20,
+    },
+    errorTitle: {
+      fontSize: 22,
+      fontWeight: '600',
+      color: '#1a1a1a',
+      marginTop: 16,
+      marginBottom: 8,
+    },
+    errorText: {
+      fontSize: 16,
+      color: '#666',
+      textAlign: 'center',
+      marginBottom: 24,
+    },
+    retryButton: {
+      backgroundColor: '#1a1a1a',
+      paddingHorizontal: 20,
+      paddingVertical: 12,
+      borderRadius: 8,
+    },
+    retryButtonText: {
+      fontSize: 16,
+      fontWeight: '500',
+      color: '#FFFFFF',
     },
     header: {
       flexDirection: 'row',
@@ -313,12 +567,23 @@ import {
     addressContainer: {
       flexDirection: 'row',
       alignItems: 'center',
+      marginBottom: 6,
     },
     addressText: {
       fontSize: 14,
       color: '#666',
       marginLeft: 4,
       flex: 1,
+    },
+    ratingContainer: {
+      flexDirection: 'row',
+      alignItems: 'center',
+    },
+    ratingText: {
+      fontSize: 14,
+      color: '#666',
+      marginLeft: 5,
+      fontWeight: '500',
     },
     sectionContainer: {
       marginHorizontal: 16,
@@ -411,6 +676,12 @@ import {
       fontSize: 14,
       height: 100,
       textAlignVertical: 'top',
+    },
+    characterCount: {
+      fontSize: 12,
+      color: '#999',
+      textAlign: 'right',
+      marginTop: 4,
     },
     summaryContainer: {
       margin: 16,

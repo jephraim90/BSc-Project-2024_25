@@ -86,7 +86,7 @@ const EditRestaurantMenu = () => {
   const handleSaveMenu = async () => {
     setSaving(true);
     try {
-      // updated restaurant data with menu sections
+      // Prepare updated restaurant data with menu sections
       const updatedData = {
         menuSections: menuSections,
         updatedAt: new Date().toISOString(),

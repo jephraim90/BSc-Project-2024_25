@@ -35,7 +35,7 @@ const Profile = () => {
     );
   }
 
-  // render content based on user role
+  // Function to render content based on user role
   const renderRoleBasedContent = () => {
     switch (user?.role) {
       case "admin":

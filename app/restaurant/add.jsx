@@ -28,7 +28,7 @@ const AddRestaurant = () => {
     options = {}
   ) => {
     if (Platform.OS === "web") {
-      // Web implementation 
+      // Web implementation with confirm-based workaround
       const buttonLabels = buttons.map(b => b.text).join(' / ');
       const confirmation = window.confirm(
         `${title}\n\n${message}\n\n${buttonLabels}`
@@ -94,15 +94,15 @@ const AddRestaurant = () => {
         address,
         phone,
         specialties: specialties.split(',').map(item => item.trim()).filter(item => item),
-        rating: 0, 
-        reviews: 0, 
+        rating: 0, // New restaurants start with 0 rating
+        reviews: 0, // New restaurants start with 0 reviews
         images: imageUrl ? [imageUrl] : [],
         hours: [
           { day: 'Monday-Friday', hours: '9:00 AM - 10:00 PM' },
           { day: 'Saturday-Sunday', hours: '10:00 AM - 11:00 PM' },
         ],
         menuSections: [],
-        ownerId: user.uid, 
+        ownerId: user.uid, // Link the restaurant to the current user
         createdAt: new Date().toISOString(),
       };
       

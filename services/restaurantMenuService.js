@@ -1,8 +1,12 @@
-
 import databaseService from "./databaseService";
 
 const RestaurantMenuService = {
-
+  /**
+   * Add a new menu section to a restaurant
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {object} sectionData - Menu section data to add
+   * @returns {Promise<object>} Result of the operation
+   */
   async addMenuSection(restaurantId, sectionData) {
     try {
       // First get the current restaurant data
@@ -51,7 +55,13 @@ const RestaurantMenuService = {
     }
   },
 
-
+  /**
+   * Update an existing menu section
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {number} sectionIndex - Index of the section to update
+   * @param {object} sectionData - Updated section data
+   * @returns {Promise<object>} Result of the operation
+   */
   async updateMenuSection(restaurantId, sectionIndex, sectionData) {
     try {
       // First get the current restaurant data
@@ -98,7 +108,12 @@ const RestaurantMenuService = {
     }
   },
 
-
+  /**
+   * Delete a menu section
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {number} sectionIndex - Index of the section to delete
+   * @returns {Promise<object>} Result of the operation
+   */
   async deleteMenuSection(restaurantId, sectionIndex) {
     try {
       // First get the current restaurant data
@@ -202,7 +217,7 @@ const RestaurantMenuService = {
 
   async updateMenuItem(restaurantId, sectionIndex, itemIndex, itemData) {
     try {
-      // First get the current restaurant data
+      // Get the current restaurant data
       const result = await databaseService.getDocumentById(
         "restaurants",
         restaurantId
@@ -354,10 +369,16 @@ const RestaurantMenuService = {
     }
   },
 
-
+  /**
+   * Reorder menu items within a section
+   * @param {string} restaurantId - ID of the restaurant
+   * @param {number} sectionIndex - Index of the section
+   * @param {Array<number>} newOrder - Array of item indices in the new order
+   * @returns {Promise<object>} Result of the operation
+   */
   async reorderMenuItems(restaurantId, sectionIndex, newOrder) {
     try {
-      // current restaurant data
+      // First get the current restaurant data
       const result = await databaseService.getDocumentById(
         "restaurants",
         restaurantId

@@ -1,4 +1,4 @@
-
+// services/databaseService.js
 import { 
     collection, 
     doc, 

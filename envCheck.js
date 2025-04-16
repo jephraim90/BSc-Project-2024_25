@@ -1,7 +1,7 @@
 const { initializeApp } = require('firebase/app');
 const { getFirestore, collection, getDocs } = require('firebase/firestore');
 
-
+// Your Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -11,15 +11,15 @@ const firebaseConfig = {
   appId: process.env.EXPO_PUBLIC_FIREBASE_APP_ID
 };
 
-
+// Function to log environment info and test connection
 const checkEnvironment = async () => {
   console.log('Environment Check for Firebase/Firestore');
   console.log('======================================');
   
- 
+  // Log Node version
   console.log(`Node version: ${process.version}`);
   
-
+  // Check Firebase packages
   console.log('\nPackage versions:');
   try {
     const firebasePkg = require('firebase/package.json');
@@ -28,7 +28,7 @@ const checkEnvironment = async () => {
     console.log('firebase: Unable to determine version');
   }
   
- 
+  // Environment variables (masked for security)
   console.log('\nEnvironment variables check:');
   
   const envVars = [
@@ -45,32 +45,33 @@ const checkEnvironment = async () => {
     if (!value) {
       console.log(`${varName}: Missing or empty`);
     } else {
-
+      // Mask the value for security - show first 3 chars only
       const maskedValue = value.substring(0, 3) + '...' + 
         (value.length > 6 ? value.substring(value.length - 3) : '');
-      console.log(`${varName}: ${maskedValue} (${value.length} chars)`);
+      console.log(` ${varName}: ${maskedValue} (${value.length} chars)`);
     }
   });
   
- 
+  // Try initializing Firebase
   console.log('\nTesting Firebase initialization:');
   try {
     const app = initializeApp(firebaseConfig);
-    console.log('Firebase initialized successfully');
+    console.log(' Firebase initialized successfully');
     
-   e
+    // Try connecting to Firestore
     console.log('\nTesting Firestore connection:');
     const db = getFirestore(app);
     
     try {
-   
+      // Try to read data (this will test connection without writing)
       console.log('Attempting to read from Firestore...');
       const querySnapshot = await getDocs(collection(db, 'test-collection-that-probably-doesnt-exist'));
-      console.log(`Firestore read successful. Found ${querySnapshot.size} documents.`);
+      console.log(` Firestore read successful. Found ${querySnapshot.size} documents.`);
     } catch (error) {
-   
+      // If the collection doesn't exist, we should get a specific error
+      // If it's a 'not-found' error, that's actually good - it means we connected
       if (error.code === 'not-found') {
-        console.log('Firestore connection successful (collection not found, but that\'s expected)');
+        console.log(' Firestore connection successful (collection not found, but that\'s expected)');
       } else {
         console.log('Firestore read error:', error.message);
         console.log('Error code:', error.code);
@@ -85,5 +86,5 @@ const checkEnvironment = async () => {
   console.log('\nEnvironment check complete.');
 };
 
-
+// Run the environment check
 checkEnvironment();

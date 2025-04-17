@@ -1,14 +1,16 @@
 import { View, Text } from 'react-native'
 import React from 'react'
-import { Stack } from 'expo-router'
 import { AuthProvider } from '@/contexts/AuthContext';
+import { Stack } from 'expo-router';
 
-const AuthenticationLayout = () => {
+
+const EnhancedResLayout = () => {
   return (
-    <AuthProvider>
+      <AuthProvider>
+    
     <Stack screenOptions={{headerShown: false}} />
     </AuthProvider>
   )
 }
 
-export default AuthenticationLayout
+export default EnhancedResLayout

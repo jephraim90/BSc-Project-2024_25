@@ -12,7 +12,6 @@ import {
   KeyboardAvoidingView,
   Image
 } from 'react-native';
-
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import RestaurantService from '@/services/restaurantService';
@@ -118,6 +117,7 @@ const EditRestaurant = () => {
         phone,
         specialties: specialties.split(',').map(item => item.trim()).filter(item => item),
         images: imageUrl ? [imageUrl] : [],
+        // We don't update rating, reviews, menuSections, or ownerId here
         updatedAt: new Date().toISOString(),
       };
       

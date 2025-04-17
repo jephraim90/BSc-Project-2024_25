@@ -1,3 +1,4 @@
+// services/restaurantMenuService.js
 import databaseService from "./databaseService";
 
 const RestaurantMenuService = {
@@ -217,7 +218,7 @@ const RestaurantMenuService = {
 
   async updateMenuItem(restaurantId, sectionIndex, itemIndex, itemData) {
     try {
-      // Get the current restaurant data
+      // First get the current restaurant data
       const result = await databaseService.getDocumentById(
         "restaurants",
         restaurantId

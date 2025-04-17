@@ -9,18 +9,20 @@ import {
   ActivityIndicator,
   Alert,
   Platform,
-  KeyboardAvoidingView
+  KeyboardAvoidingView,
+  Switch
 } from 'react-native';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import RestaurantService from '@/services/restaurantService';
 import { useAuth } from '@/contexts/AuthContext';
-
+import { serverTimestamp } from 'firebase/firestore';
 
 const AddRestaurant = () => {
   const router = useRouter();
   const { user } = useAuth();
   const [loading, setLoading] = useState(false);
+  
   const showPlatformAlert = (
     title,
     message,
@@ -28,7 +30,6 @@ const AddRestaurant = () => {
     options = {}
   ) => {
     if (Platform.OS === "web") {
-      // Web implementation with confirm-based workaround
       const buttonLabels = buttons.map(b => b.text).join(' / ');
       const confirmation = window.confirm(
         `${title}\n\n${message}\n\n${buttonLabels}`
@@ -48,15 +49,33 @@ const AddRestaurant = () => {
     }
   }
   
-  // Form state
+  // Basic information
   const [name, setName] = useState('');
   const [cuisine, setCuisine] = useState('');
   const [priceRange, setPriceRange] = useState('$$');
   const [description, setDescription] = useState('');
   const [address, setAddress] = useState('');
   const [phone, setPhone] = useState('');
-  const [specialties, setSpecialties] = useState('');
+  const [email, setEmail] = useState('');
+  const [website, setWebsite] = useState('');
   const [imageUrl, setImageUrl] = useState('');
+  
+  // Business hours
+  const [businessHours, setBusinessHours] = useState({
+    monday: { open: '9:00 AM', close: '10:00 PM' },
+    tuesday: { open: '9:00 AM', close: '10:00 PM' },
+    wednesday: { open: '9:00 AM', close: '10:00 PM' },
+    thursday: { open: '9:00 AM', close: '10:00 PM' },
+    friday: { open: '9:00 AM', close: '10:00 PM' },
+    saturday: { open: '10:00 AM', close: '11:00 PM' },
+    sunday: { open: '10:00 AM', close: '11:00 PM' }
+  });
+  
+  // Features and additional info
+  const [capacity, setCapacity] = useState('');
+  const [isOpen, setIsOpen] = useState(true);
+  const [specialNotes, setSpecialNotes] = useState('');
+  const [features, setFeatures] = useState('');
   
   // Form validation
   const [errors, setErrors] = useState({});
@@ -64,6 +83,17 @@ const AddRestaurant = () => {
   // Check if user has permission to add restaurants
   const hasPermission = user && (user.role === 'admin' || user.role === 'owner');
   
+  // Update business hours
+  const updateBusinessHours = (day, field, value) => {
+    setBusinessHours(prev => ({
+      ...prev,
+      [day]: {
+        ...prev[day],
+        [field]: value
+      }
+    }));
+  };
+
   // Handle form submission
   const handleSubmit = async () => {
     // Reset errors
@@ -85,25 +115,27 @@ const AddRestaurant = () => {
     setLoading(true);
     
     try {
-      // Prepare restaurant data
+      // Prepare restaurant data based on our model
       const restaurantData = {
         name,
-        cuisine,
-        priceRange,
+        ownerId: user.uid,
         description,
         address,
-        phone,
-        specialties: specialties.split(',').map(item => item.trim()).filter(item => item),
+        cuisine,
+        priceRange,
         rating: 0, // New restaurants start with 0 rating
-        reviews: 0, // New restaurants start with 0 reviews
         images: imageUrl ? [imageUrl] : [],
-        hours: [
-          { day: 'Monday-Friday', hours: '9:00 AM - 10:00 PM' },
-          { day: 'Saturday-Sunday', hours: '10:00 AM - 11:00 PM' },
-        ],
-        menuSections: [],
-        ownerId: user.uid, // Link the restaurant to the current user
-        createdAt: new Date().toISOString(),
+        phone,
+        email,
+        website,
+        isOpen,
+        businessHours,
+        features: features.split(',').map(item => item.trim()).filter(item => item),
+        capacity: parseInt(capacity) || 0,
+        currentCapacity: 0, // Initial capacity percentage is 0
+        specialNotes,
+       createdAt: serverTimestamp(),
+updatedAt: serverTimestamp()
       };
       
       // Add restaurant to database
@@ -121,14 +153,30 @@ const AddRestaurant = () => {
             { 
               text: 'Add Another', 
               onPress: () => {
+                // Reset all form fields
                 setName('');
                 setCuisine('');
                 setPriceRange('$$');
                 setDescription('');
                 setAddress('');
                 setPhone('');
-                setSpecialties('');
+                setEmail('');
+                setWebsite('');
                 setImageUrl('');
+                setCapacity('');
+                setIsOpen(true);
+                setSpecialNotes('');
+                setFeatures('');
+                // Reset business hours to defaults
+                setBusinessHours({
+                  monday: { open: '9:00 AM', close: '10:00 PM' },
+                  tuesday: { open: '9:00 AM', close: '10:00 PM' },
+                  wednesday: { open: '9:00 AM', close: '10:00 PM' },
+                  thursday: { open: '9:00 AM', close: '10:00 PM' },
+                  friday: { open: '9:00 AM', close: '10:00 PM' },
+                  saturday: { open: '10:00 AM', close: '11:00 PM' },
+                  sunday: { open: '10:00 AM', close: '11:00 PM' }
+                });
               },
               style: 'cancel' // For iOS
             }
@@ -136,7 +184,7 @@ const AddRestaurant = () => {
         );
       }
     } catch (error) {
-      Alert.alert('Error', error.message || 'Failed to add restaurant');
+      showPlatformAlert('Error Message', error.message || 'Failed to add restaurant');
     } finally {
       setLoading(false);
     }
@@ -167,18 +215,23 @@ const AddRestaurant = () => {
     <KeyboardAvoidingView
       behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       style={{flex: 1}}
-    ><ScrollView style={styles.container}>
-      <View style={styles.header}>
-        <TouchableOpacity 
-          style={styles.backButton}
-          onPress={() => router.back()}
-        >
-          <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
-        </TouchableOpacity>
-        <Text style={styles.headerTitle}>Add New Restaurant</Text>
-        <View style={{width: 24}}></View>
-      </View>
+    >
+      <ScrollView style={styles.container}>
+        <View style={styles.header}>
+          <TouchableOpacity 
+            style={styles.backButton}
+            onPress={() => router.back()}
+          >
+            <Ionicons name="arrow-back" size={24} color="#1a1a1a" />
+          </TouchableOpacity>
+          <Text style={styles.headerTitle}>Add New Restaurant</Text>
+          <View style={{width: 24}}></View>
+        </View>
+        
         <View style={styles.formContainer}>
+          {/* Basic Information Section */}
+          <Text style={styles.sectionTitle}>Basic Information</Text>
+          
           <Text style={styles.formLabel}>Restaurant Name*</Text>
           <TextInput
             style={[styles.input, errors.name && styles.inputError]}
@@ -222,6 +275,22 @@ const AddRestaurant = () => {
             ))}
           </View>
           
+          <Text style={styles.formLabel}>Description*</Text>
+          <TextInput
+            style={[styles.textArea, errors.description && styles.inputError]}
+            value={description}
+            onChangeText={setDescription}
+            placeholder="Describe your restaurant"
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={4}
+            textAlignVertical="top"
+          />
+          {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
+          
+          {/* Contact Information Section */}
+          <Text style={styles.sectionTitle}>Contact Information</Text>
+          
           <Text style={styles.formLabel}>Address*</Text>
           <TextInput
             style={[styles.input, errors.address && styles.inputError]}
@@ -243,27 +312,56 @@ const AddRestaurant = () => {
           />
           {errors.phone && <Text style={styles.errorText}>{errors.phone}</Text>}
           
-          <Text style={styles.formLabel}>Description*</Text>
-          <TextInput
-            style={[styles.textArea, errors.description && styles.inputError]}
-            value={description}
-            onChangeText={setDescription}
-            placeholder="Describe your restaurant"
-            placeholderTextColor="#999"
-            multiline
-            numberOfLines={4}
-            textAlignVertical="top"
-          />
-          {errors.description && <Text style={styles.errorText}>{errors.description}</Text>}
-          
-          <Text style={styles.formLabel}>Specialties (comma separated)</Text>
+          <Text style={styles.formLabel}>Email</Text>
           <TextInput
             style={styles.input}
-            value={specialties}
-            onChangeText={setSpecialties}
-            placeholder="e.g. Seafood Pasta, Tiramisu, Wood-fired Pizza"
+            value={email}
+            onChangeText={setEmail}
+            placeholder="restaurant@example.com"
+            placeholderTextColor="#999"
+            keyboardType="email-address"
+          />
+          
+          <Text style={styles.formLabel}>Website</Text>
+          <TextInput
+            style={styles.input}
+            value={website}
+            onChangeText={setWebsite}
+            placeholder="https://yourrestaurant.com"
             placeholderTextColor="#999"
           />
+          
+          {/* Business Hours Section */}
+          <Text style={styles.sectionTitle}>Business Hours</Text>
+          
+          {Object.keys(businessHours).map((day) => (
+            <View key={day} style={styles.businessHoursRow}>
+              <Text style={styles.dayLabel}>{day.charAt(0).toUpperCase() + day.slice(1)}</Text>
+              
+              <View style={styles.hoursInputContainer}>
+                <TextInput 
+                  style={styles.hoursInput}
+                  value={businessHours[day].open}
+                  onChangeText={(value) => updateBusinessHours(day, 'open', value)}
+                  placeholder="9:00 AM"
+                  placeholderTextColor="#999"
+                />
+                
+                <Text style={styles.toText}>to</Text>
+                
+                <TextInput 
+                  style={styles.hoursInput}
+                  value={businessHours[day].close}
+                  onChangeText={(value) => updateBusinessHours(day, 'close', value)}
+                  placeholder="10:00 PM"
+                  placeholderTextColor="#999"
+                />
+              </View>
+            </View>
+          ))}
+          
+          {/* Additional Information Section */}
+          <Text style={styles.sectionTitle}>Additional Information</Text>
           
           <Text style={styles.formLabel}>Main Image URL</Text>
           <TextInput
@@ -272,6 +370,47 @@ const AddRestaurant = () => {
             onChangeText={setImageUrl}
             placeholder="https://example.com/image.jpg"
             placeholderTextColor="#999"
+          />
+          
+          <Text style={styles.formLabel}>Features (comma separated)</Text>
+          <TextInput
+            style={styles.input}
+            value={features}
+            onChangeText={setFeatures}
+            placeholder="e.g. Outdoor Seating, Vegetarian Options, Live Music"
+            placeholderTextColor="#999"
+          />
+          
+          <Text style={styles.formLabel}>Restaurant Capacity</Text>
+          <TextInput
+            style={styles.input}
+            value={capacity}
+            onChangeText={setCapacity}
+            placeholder="e.g. 100"
+            placeholderTextColor="#999"
+            keyboardType="number-pad"
+          />
+          
+          <View style={styles.switchContainer}>
+            <Text style={styles.formLabel}>Currently Open</Text>
+            <Switch
+              value={isOpen}
+              onValueChange={setIsOpen}
+              trackColor={{ false: "#767577", true: "#81b0ff" }}
+              thumbColor={isOpen ? "#1a1a1a" : "#f4f3f4"}
+            />
+          </View>
+          
+          <Text style={styles.formLabel}>Special Notes</Text>
+          <TextInput
+            style={styles.textArea}
+            value={specialNotes}
+            onChangeText={setSpecialNotes}
+            placeholder="Any additional information about your restaurant"
+            placeholderTextColor="#999"
+            multiline
+            numberOfLines={3}
+            textAlignVertical="top"
           />
           
           <Text style={styles.note}>
@@ -317,6 +456,16 @@ const styles = StyleSheet.create({
   },
   formContainer: {
     padding: 16,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1a1a1a',
+    marginTop: 24,
+    marginBottom: 16,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#ddd',
   },
   formLabel: {
     fontSize: 14,
@@ -375,6 +524,41 @@ const styles = StyleSheet.create({
   },
   priceRangeTextActive: {
     color: '#FFFFFF',
+  },
+  businessHoursRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 10,
+  },
+  dayLabel: {
+    width: 100,
+    fontSize: 14,
+    fontWeight: '500',
+  },
+  hoursInputContainer: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  hoursInput: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 8,
+    padding: 10,
+    borderWidth: 1,
+    borderColor: '#ddd',
+    fontSize: 14,
+  },
+  toText: {
+    marginHorizontal: 10,
+    fontSize: 14,
+    color: '#666',
+  },
+  switchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 16,
   },
   note: {
     color: '#666',

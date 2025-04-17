@@ -18,13 +18,13 @@ const envVars = [
 let missingVars = false;
 envVars.forEach(varName => {
   if (!process.env[varName]) {
-    console.log(`${varName} is missing`);
+    console.log(`❌ ${varName} is missing`);
     missingVars = true;
   } else {
     // Show first 3 and last 3 characters only for security
     const value = process.env[varName];
     const maskedValue = value.substring(0, 3) + '...' + value.substring(value.length - 3);
-    console.log(` ${varName}: ${maskedValue}`);
+    console.log(`✅ ${varName}: ${maskedValue}`);
   }
 });
 
@@ -33,7 +33,7 @@ if (missingVars) {
   process.exit(1);
 }
 
-// Firebase configuration
+// Your Firebase configuration
 const firebaseConfig = {
   apiKey: process.env.EXPO_PUBLIC_FIREBASE_API_KEY,
   authDomain: process.env.EXPO_PUBLIC_FIREBASE_AUTH_DOMAIN,
@@ -48,10 +48,10 @@ console.log('\nVerifying Firebase config:');
 let configMissing = false;
 Object.entries(firebaseConfig).forEach(([key, value]) => {
   if (!value) {
-    console.log(`${key} is missing in firebaseConfig`);
+    console.log(`❌ ${key} is missing in firebaseConfig`);
     configMissing = true;
   } else {
-    console.log(` ${key} is set`);
+    console.log(`✅ ${key} is set`);
   }
 });
 
@@ -66,7 +66,7 @@ const app = initializeApp(firebaseConfig);
 const db = getFirestore(app);
 console.log('Firebase initialized successfully');
 
-// Sample restaurant data 
+// Sample restaurant data (simplified for testing)
 const restaurants = [
   {
     name: 'La Trattoria Italiana',
@@ -162,7 +162,7 @@ const restaurants = [
       }
     ]
   }
-  
+  // Add more restaurants here
 ];
 
 // Function to seed the database
@@ -174,9 +174,9 @@ const seedRestaurants = async () => {
       try {
         console.log(`Adding restaurant: ${restaurant.name}`);
         const docRef = await addDoc(collection(db, "restaurants"), restaurant);
-        console.log(` Added restaurant with ID: ${docRef.id}`);
+        console.log(`✅ Added restaurant with ID: ${docRef.id}`);
       } catch (error) {
-        console.error(`Failed to add restaurant ${restaurant.name}:`, error);
+        console.error(`❌ Failed to add restaurant ${restaurant.name}:`, error);
       }
     }
 

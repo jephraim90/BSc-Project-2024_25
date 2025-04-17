@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import RestaurantService from '@/services/restaurantService';
+
 /**
  * Custom hook for fetching and filtering restaurant data
  */
@@ -76,7 +77,8 @@ const useRestaurants = () => {
       .slice(0, 10);
     setNewRestaurants(newlyAdded);
     
-    
+    // For demonstration, set some restaurants as "available tonight"
+    // In a real app, you would check availability from a bookings collection
     const available = restaurants
       .filter(restaurant => restaurant.businessHours)
       .slice(0, 5);
@@ -141,6 +143,7 @@ const useRestaurants = () => {
         const [openHours, openMinutes] = opens.split(':').map(Number);
         const [closeHours, closeMinutes] = closes.split(':').map(Number);
         
+        // Convert to minutes for easier comparison
         const currentTimeInMinutes = currentHour * 60 + currentMinute;
         const openTimeInMinutes = openHours * 60 + openMinutes;
         const closeTimeInMinutes = closeHours * 60 + closeMinutes;

@@ -7,14 +7,16 @@ import {
     ScrollView,
     Image,
     Share,
-    Linking
+    Linking,
+    Alert,
+    Platform
   } from 'react-native';
   import React, { useState, useEffect } from 'react';
   import { Ionicons } from '@expo/vector-icons';
   import { useRouter, useLocalSearchParams } from 'expo-router';
   import databaseService from '@/services/databaseService';
   import { useAuth } from '@/contexts/AuthContext';
-  
+;  
   const ReservationConfirmation = () => {
     const router = useRouter();
     const { reservationId, restaurantName, date, time, guests } = useLocalSearchParams();
@@ -23,6 +25,33 @@ import {
     const [reservation, setReservation] = useState(null);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const showPlatformAlert = (
+        title,
+        message,
+        buttons = [],
+        options = {}
+      ) => {
+        if (Platform.OS === "web") {
+          const buttonLabels = buttons.map(b => b.text).join(' / ');
+          const confirmation = window.confirm(
+            `${title}\n\n${message}\n\n${buttonLabels}`
+          );
+          
+          // Fixed button mapping
+          if (buttons.length >= 1) {
+            confirmation ? buttons[1]?.onPress?.() : buttons[0]?.onPress?.();
+          }
+        } else {
+          Alert.alert(
+            title,
+            message,
+            buttons,
+            options
+          );
+        }
+      }
+      
+  
     // Fetch reservation details if we have an ID
     useEffect(() => {
       const fetchReservation = async () => {
@@ -72,19 +101,18 @@ import {
   
     // Handle adding to calendar
     const handleAddToCalendar = () => {
-      // like react-native-add-calendar-event or expo-calendar
-      
+            
       const reservationInfo = reservation || {
         restaurantName: restaurantName || 'Restaurant Reservation',
         date: date || 'Unknown date',
         time: time || 'Unknown time'
       };
       
-     
+    
       const eventTitle = `Reservation at ${reservationInfo.restaurantName}`;
       const eventDetails = `Your table for ${reservationInfo.guests} people is confirmed.`;
       
-      Alert.alert(
+      showPlatformAlert(
         'Add to Calendar',
         'This would typically open your calendar app to add this reservation. In a production app, this would be fully implemented.',
         [
@@ -93,17 +121,22 @@ import {
       );
     };
   
-    // Handle cancellation
-    const handleCancelReservation = () => {
-        // call an API to cancel the reservation
-        showPlatformAlert(
-          'Cancel Reservation',
-          'Are you sure you want to cancel this reservation?',
-          async () => {
+// Handle cancellation
+const handleCancelReservation = () => {
+    showPlatformAlert(
+      'Cancel Reservation',
+      'Are you sure you want to cancel this reservation?',
+      [ // Proper array of button objects
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+        {
+          text: 'Confirm',
+          onPress: async () => {
             if (!reservationId) return;
             
             try {
-              // Update reservation status to cancelled
               const result = await databaseService.updateDocument('reservations', reservationId, {
                 status: 'cancelled',
                 cancelledAt: new Date().toISOString()
@@ -111,7 +144,7 @@ import {
               
               if (result.success) {
                 showPlatformAlert('Success', 'Your reservation has been cancelled.');
-                router.replace('/profile'); // Navigate to profile or another appropriate screen
+                router.replace('/profile');
               } else {
                 throw new Error(result.error || 'Failed to cancel reservation');
               }
@@ -120,8 +153,10 @@ import {
               showPlatformAlert('Error', err.message || 'Failed to cancel reservation');
             }
           }
-        );
-      };
+        }
+      ]
+    );
+  };
   
     // If the page is loaded without reservation params, show an error
     if (!loading && !reservation && !reservationId && !restaurantName) {
@@ -301,7 +336,6 @@ import {
             <TouchableOpacity 
               style={styles.contactButton}
               onPress={() => {
-                // In a real app, this would be the restaurant's actual phone number
                 Linking.openURL(`tel:+1234567890`);
               }}
             >

@@ -1,3 +1,4 @@
+// services/restaurantHoursService.js
 import databaseService from './databaseService';
 
 const RestaurantHoursService = {

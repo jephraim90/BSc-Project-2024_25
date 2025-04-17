@@ -193,7 +193,7 @@ const RestaurantDetails = () => {
               </Text>
             </View>
 
-            {/* You would fetch and display actual reviews here */}
+            {/* display actual reviews here */}
             <Text style={styles.emptyStateText}>
               No reviews yet. Be the first to review!
             </Text>
@@ -266,7 +266,7 @@ const RestaurantDetails = () => {
         <View style={styles.actionContainer}>
           <TouchableOpacity
             style={styles.reserveButton}
-            onPress={() => router.push(`/restaurant/reserve/${id}`)}
+            onPress={() => router.push(`/EnhancedRes/${id}`)}
           >
             <Text style={styles.reserveButtonText}>Reserve a Table</Text>
           </TouchableOpacity>

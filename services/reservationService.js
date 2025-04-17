@@ -300,17 +300,21 @@ const ReservationService = {
       const reservationsResult = await this.getRestaurantReservations(restaurantId, date);
       const existingReservations = reservationsResult.success ? reservationsResult.data : [];
       
-      // Generate time slots
+      // Generate time slots (simplified - a real app would use the restaurant's business hours)
       const businessHours = restaurant.businessHours[dayOfWeek];
       const timeSlots = this.generateTimeSlots(businessHours.opens, businessHours.closes, 30);
       
       // Check availability for each slot based on existing reservations and restaurant capacity
+      // This is a simplified implementation - a real app would consider table layouts,
+      // reservation duration, restaurant capacity, etc.
       const availableSlots = timeSlots.filter(slot => {
         // Check if there are too many reservations at this time slot
         const reservationsAtThisTime = existingReservations.filter(
           r => r.time === slot && r.status !== 'cancelled'
         );
         
+        // Simplified capacity check - assume each restaurant can handle 10 concurrent reservations
+        // Real implementation would be more complex based on restaurant seating capacity
         const maxSlotCapacity = restaurant.maxCapacity || 10;
         return reservationsAtThisTime.length < maxSlotCapacity;
       });

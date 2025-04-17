@@ -19,6 +19,7 @@ import {
   signOut,
   getCurrentUser,
 } from "@/services/authService";
+
 import { useRouter } from "expo-router";
 import { Ionicons } from '@expo/vector-icons';
 import {useAuth} from '@/contexts/AuthContext';
@@ -49,7 +50,7 @@ const AuthenticationScreen = () => {
           cancelAction();
         }
       } else {
-        // Simple alert without confirmation
+        
         window.alert(`${title}\n\n${message}`);
       }
     } else {

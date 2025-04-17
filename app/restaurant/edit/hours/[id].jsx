@@ -331,7 +331,7 @@ const EditRestaurantSpecialHours = () => {
     setShowDatePicker(Platform.OS === 'ios');
     
     if (date) {
-      // Make sure time is set to start of day to avoid timezone issues
+      // Time set to start of day to avoid timezone issues
       date.setHours(0, 0, 0, 0);
       setSelectedDate(date);
       

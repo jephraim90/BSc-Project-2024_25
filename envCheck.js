@@ -43,12 +43,12 @@ const checkEnvironment = async () => {
   envVars.forEach(varName => {
     const value = process.env[varName];
     if (!value) {
-      console.log(`${varName}: Missing or empty`);
+      console.log(`❌ ${varName}: Missing or empty`);
     } else {
       // Mask the value for security - show first 3 chars only
       const maskedValue = value.substring(0, 3) + '...' + 
         (value.length > 6 ? value.substring(value.length - 3) : '');
-      console.log(` ${varName}: ${maskedValue} (${value.length} chars)`);
+      console.log(`✅ ${varName}: ${maskedValue} (${value.length} chars)`);
     }
   });
   
@@ -56,7 +56,7 @@ const checkEnvironment = async () => {
   console.log('\nTesting Firebase initialization:');
   try {
     const app = initializeApp(firebaseConfig);
-    console.log(' Firebase initialized successfully');
+    console.log('✅ Firebase initialized successfully');
     
     // Try connecting to Firestore
     console.log('\nTesting Firestore connection:');
@@ -66,21 +66,21 @@ const checkEnvironment = async () => {
       // Try to read data (this will test connection without writing)
       console.log('Attempting to read from Firestore...');
       const querySnapshot = await getDocs(collection(db, 'test-collection-that-probably-doesnt-exist'));
-      console.log(` Firestore read successful. Found ${querySnapshot.size} documents.`);
+      console.log(`✅ Firestore read successful. Found ${querySnapshot.size} documents.`);
     } catch (error) {
       // If the collection doesn't exist, we should get a specific error
       // If it's a 'not-found' error, that's actually good - it means we connected
       if (error.code === 'not-found') {
-        console.log(' Firestore connection successful (collection not found, but that\'s expected)');
+        console.log('✅ Firestore connection successful (collection not found, but that\'s expected)');
       } else {
-        console.log('Firestore read error:', error.message);
+        console.log('❌ Firestore read error:', error.message);
         console.log('Error code:', error.code);
         if (error.details) console.log('Error details:', error.details);
       }
     }
     
   } catch (error) {
-    console.log('Firebase initialization failed:', error.message);
+    console.log('❌ Firebase initialization failed:', error.message);
   }
   
   console.log('\nEnvironment check complete.');

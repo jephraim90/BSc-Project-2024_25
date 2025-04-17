@@ -143,6 +143,7 @@ const OwnerContent = ({ user }) => {
     avgRating: 0,
   });
   const [loading, setLoading] = useState(true);
+  
   useEffect(() => {
     const fetchOwnerRestaurants = async () => {
       try {
@@ -151,8 +152,10 @@ const OwnerContent = ({ user }) => {
         const result = await RestaurantService.getRestaurantsByOwnerId(
           user.uid
         );
+        
         if (result && result.length > 0) {
           setRestaurants(result);
+          
           // Calculate stats
           const totalRating = result.reduce(
             (sum, restaurant) => sum + restaurant.rating,
@@ -160,12 +163,13 @@ const OwnerContent = ({ user }) => {
           );
           const avgRating =
             result.length > 0 ? (totalRating / result.length).toFixed(1) : 0;
-          // const todaysReservations = await RestaurantService.getTodaysReservationsCount(user.uid);
+          
+          // Get today's reservations count
+          const todaysReservations = await RestaurantService.getTodaysReservationsCount(user.uid);
 
           setStats({
             count: result.length,
-            // reservations: todaysReservations || 0,
-            reservations: 0,
+            reservations: todaysReservations,
             avgRating: avgRating,
           });
         }
@@ -175,6 +179,7 @@ const OwnerContent = ({ user }) => {
         setLoading(false);
       }
     };
+    
     if (user && user.uid) {
       fetchOwnerRestaurants();
     }
@@ -188,6 +193,7 @@ const OwnerContent = ({ user }) => {
       </View>
     );
   }
+  
   return (
     <View style={styles.roleContainer}>
       <Text style={styles.sectionTitle}>Restaurant Management</Text>
@@ -242,20 +248,20 @@ const OwnerContent = ({ user }) => {
                   <View style={styles.restaurantItemStatItem}>
                     <Ionicons name="people-outline" size={14} color="#666" />
                     <Text style={styles.restaurantItemStatText}>
-                      {restaurant.reviews} reviews
+                      {restaurant.reviews || 0} reviews
                     </Text>
                   </View>
                 </View>
               </View>
             </View>
             <View style={styles.restaurantItemActions}>
-            <TouchableOpacity 
-  style={styles.editButton}
-  onPress={() => router.push(`/restaurant/edit/${restaurant.id}`)}
->
-  <Ionicons name="pencil-outline" size={16} color="#1a1a1a" />
-  <Text style={styles.editButtonText}>Edit</Text>
-</TouchableOpacity>
+              <TouchableOpacity 
+                style={styles.editButton}
+                onPress={() => router.push(`/restaurant/edit/${restaurant.id}`)}
+              >
+                <Ionicons name="pencil-outline" size={16} color="#1a1a1a" />
+                <Text style={styles.editButtonText}>Edit</Text>
+              </TouchableOpacity>
               <Ionicons name="chevron-forward" size={20} color="#666" />
             </View>
           </TouchableOpacity>
@@ -279,7 +285,6 @@ const OwnerContent = ({ user }) => {
     </View>
   );
 };
-
 // Regular User content component
 const UserContent = ({ user }) => {
   const router = useRouter();

@@ -22,14 +22,15 @@ import {
     const [guests, setGuests] = useState('2');
     const [specialRequests, setSpecialRequests] = useState('');
   
-    // Sample restaurant data
+   // Sample restaurant data
     const restaurant = {
       id: '1',
       name: 'La Trattoria Italiana',
       image: 'https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80',
       address: '123 Venice Street, Venice, 30122',
     };
-     // Sample available times
+  
+    // Sample available times
     const availableTimes = [
       '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM'
     ];
@@ -66,9 +67,8 @@ import {
   
     // Handle reservation submission
     const handleReserve = () => {
-      // In a real app, this would send the reservation to your backend
       console.log('Reservation submitted', { date, time, guests, specialRequests });
-      // Redirect to the confirmation page
+      // Navigate to confirmation page
       router.push('/confirmation');
     };
   

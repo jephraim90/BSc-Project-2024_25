@@ -98,7 +98,8 @@ import {
   
     // Generate available time slots based on restaurant's business hours
     const generateAvailableTimes = (restaurantData) => {
-      /
+      // This is a simplified implementation - a real app would check actual availability
+      // against existing reservations and time slots
       
       const defaultTimes = [
         '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', 
@@ -107,7 +108,9 @@ import {
       
       // If restaurant has business hours, use them to generate available times
       if (restaurantData?.businessHours) {
-        
+        // This would be more complex in a real app, checking the day of week
+        // and generating times within the restaurant's opening hours
+        // For now, we'll just use the default times
       }
       
       setAvailableTimes(defaultTimes);

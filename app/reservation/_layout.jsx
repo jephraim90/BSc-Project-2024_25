@@ -7,7 +7,20 @@ import { AuthProvider } from '@/contexts/AuthContext';
 const ReservationLayout = () => {
   return (
       <AuthProvider>
-    <Stack screenOptions={{headerShown: false}} />
+      <Stack>
+     <Stack.Screen
+          name="[id]"
+          options={{
+            headerShown: false,
+          }}
+        />
+        <Stack.Screen
+          name="edit"
+          options={{
+            headerShown: false,
+          }}
+        />
+        </Stack>
      </AuthProvider>
   )
 }

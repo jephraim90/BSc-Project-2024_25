@@ -5,13 +5,15 @@ import {
   StyleSheet,
   ScrollView,
   TouchableOpacity,
-  Image
+  Image,
 } from "react-native";
 import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
 import RestaurantService from "../../services/restaurantService";
+import databaseService from '@/services/databaseService';
+import { where } from "firebase/firestore";
 
 const Profile = () => {
   const router = useRouter();
@@ -72,28 +74,74 @@ const Profile = () => {
 // Admin-specific content component
 const AdminContent = ({ user }) => {
   const router = useRouter();
+  const [stats, setStats] = useState({
+    restaurants: 0,
+    users: 0,
+    reservations: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchAdminStats = async () => {
+      if (!user || user.role !== 'admin') return;
+      
+      setLoading(true);
+      try {
+        // Get collection counts
+        const restaurantsResult = await databaseService.getDocuments('restaurants');
+        const usersResult = await databaseService.getDocuments('users');
+        const reservationsResult = await databaseService.getDocuments('reservations', [
+          where('status', '!=', 'cancelled')
+        ]);
+        
+        setStats({
+          restaurants: restaurantsResult.success ? restaurantsResult.data.length : 0,
+          users: usersResult.success ? usersResult.data.length : 0,
+          reservations: reservationsResult.success ? reservationsResult.data.length : 0
+        });
+      } catch (error) {
+        console.error('Error fetching admin stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchAdminStats();
+  }, [user]);
 
   return (
     <View style={styles.roleContainer}>
       <Text style={styles.sectionTitle}>Admin Dashboard</Text>
-
+      
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>42</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.restaurants}</Text>
+          )}
           <Text style={styles.statLabel}>Restaurants</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>138</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.users}</Text>
+          )}
           <Text style={styles.statLabel}>Users</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>867</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.reservations}</Text>
+          )}
           <Text style={styles.statLabel}>Reservations</Text>
         </View>
       </View>
-
+      
       <Text style={styles.sectionTitle}>Management</Text>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/admin/restaurants")}
@@ -102,7 +150,7 @@ const AdminContent = ({ user }) => {
         <Text style={styles.menuItemText}>Manage Restaurants</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/admin/users")}
@@ -111,7 +159,7 @@ const AdminContent = ({ user }) => {
         <Text style={styles.menuItemText}>Manage Users</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/admin/reservations")}
@@ -120,7 +168,7 @@ const AdminContent = ({ user }) => {
         <Text style={styles.menuItemText}>View All Reservations</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/admin/analytics")}
@@ -143,7 +191,7 @@ const OwnerContent = ({ user }) => {
     avgRating: 0,
   });
   const [loading, setLoading] = useState(true);
-  
+
   useEffect(() => {
     const fetchOwnerRestaurants = async () => {
       try {
@@ -152,10 +200,10 @@ const OwnerContent = ({ user }) => {
         const result = await RestaurantService.getRestaurantsByOwnerId(
           user.uid
         );
-        
+
         if (result && result.length > 0) {
           setRestaurants(result);
-          
+
           // Calculate stats
           const totalRating = result.reduce(
             (sum, restaurant) => sum + restaurant.rating,
@@ -163,9 +211,10 @@ const OwnerContent = ({ user }) => {
           );
           const avgRating =
             result.length > 0 ? (totalRating / result.length).toFixed(1) : 0;
-          
+
           // Get today's reservations count
-          const todaysReservations = await RestaurantService.getTodaysReservationsCount(user.uid);
+          const todaysReservations =
+            await RestaurantService.getTodaysReservationsCount(user.uid);
 
           setStats({
             count: result.length,
@@ -179,7 +228,7 @@ const OwnerContent = ({ user }) => {
         setLoading(false);
       }
     };
-    
+
     if (user && user.uid) {
       fetchOwnerRestaurants();
     }
@@ -193,7 +242,7 @@ const OwnerContent = ({ user }) => {
       </View>
     );
   }
-  
+
   return (
     <View style={styles.roleContainer}>
       <Text style={styles.sectionTitle}>Restaurant Management</Text>
@@ -255,7 +304,7 @@ const OwnerContent = ({ user }) => {
               </View>
             </View>
             <View style={styles.restaurantItemActions}>
-              <TouchableOpacity 
+              <TouchableOpacity
                 style={styles.editButton}
                 onPress={() => router.push(`/restaurant/edit/${restaurant.id}`)}
               >
@@ -288,28 +337,83 @@ const OwnerContent = ({ user }) => {
 // Regular User content component
 const UserContent = ({ user }) => {
   const router = useRouter();
+  const [stats, setStats] = useState({
+    reservations: 0,
+    favorites: 0,
+    reviews: 0
+  });
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    const fetchUserStats = async () => {
+      if (!user) return;
+      
+      setLoading(true);
+      try {
+        // Fetch reservations count
+        const reservationsResult = await databaseService.getDocuments('reservations', [
+          databaseService.queries.where('userId', '==', user.uid),
+          databaseService.queries.where('status', '==', 'confirmed')
+        ]);
+        
+        // Fetch favorites count
+        const favoritesResult = await databaseService.getDocuments('favorites', [
+          databaseService.queries.where('userId', '==', user.uid)
+        ]);
+        
+        // Fetch reviews count
+        const reviewsResult = await databaseService.getDocuments('reviews', [
+          databaseService.queries.where('userId', '==', user.uid)
+        ]);
+        
+        setStats({
+          reservations: reservationsResult.success ? reservationsResult.data.length : 0,
+          favorites: favoritesResult.success ? favoritesResult.data.length : 0,
+          reviews: reviewsResult.success ? reviewsResult.data.length : 0
+        });
+      } catch (error) {
+        console.error('Error fetching user stats:', error);
+      } finally {
+        setLoading(false);
+      }
+    };
+    
+    fetchUserStats();
+  }, [user]);
 
   return (
     <View style={styles.roleContainer}>
       <Text style={styles.sectionTitle}>Your Activities</Text>
-
+      
       <View style={styles.statsContainer}>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>5</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.reservations}</Text>
+          )}
           <Text style={styles.statLabel}>Reservations</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>8</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.favorites}</Text>
+          )}
           <Text style={styles.statLabel}>Favorites</Text>
         </View>
         <View style={styles.statItem}>
-          <Text style={styles.statNumber}>12</Text>
+          {loading ? (
+            <ActivityIndicator size="small" color="#1a1a1a" />
+          ) : (
+            <Text style={styles.statNumber}>{stats.reviews}</Text>
+          )}
           <Text style={styles.statLabel}>Reviews</Text>
         </View>
       </View>
-
+      
       <Text style={styles.sectionTitle}>Your Account</Text>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/reservations")}
@@ -318,7 +422,16 @@ const UserContent = ({ user }) => {
         <Text style={styles.menuItemText}>My Reservations</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => router.push("/shared-reservations")}
+      >
+        <Ionicons name="people-outline" size={24} color="#1a1a1a" />
+        <Text style={styles.menuItemText}>Shared Reservations</Text>
+        <Ionicons name="chevron-forward" size={20} color="#666" />
+      </TouchableOpacity>
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/favourites")}
@@ -327,7 +440,7 @@ const UserContent = ({ user }) => {
         <Text style={styles.menuItemText}>Favorite Restaurants</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/reviews")}
@@ -336,7 +449,7 @@ const UserContent = ({ user }) => {
         <Text style={styles.menuItemText}>My Reviews</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/settings")}
@@ -345,7 +458,7 @@ const UserContent = ({ user }) => {
         <Text style={styles.menuItemText}>Account Settings</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
-
+      
       <TouchableOpacity
         style={styles.menuItem}
         onPress={() => router.push("/help")}

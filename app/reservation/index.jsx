@@ -22,7 +22,7 @@ import {
     const [guests, setGuests] = useState('2');
     const [specialRequests, setSpecialRequests] = useState('');
   
-   // Sample restaurant data
+    // Sample restaurant data
     const restaurant = {
       id: '1',
       name: 'La Trattoria Italiana',

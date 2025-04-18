@@ -16,7 +16,8 @@ import {
   import { useRouter, useLocalSearchParams } from 'expo-router';
   import databaseService from '@/services/databaseService';
   import { useAuth } from '@/contexts/AuthContext';
-;  
+;
+  
   const ReservationConfirmation = () => {
     const router = useRouter();
     const { reservationId, restaurantName, date, time, guests } = useLocalSearchParams();
@@ -101,14 +102,15 @@ import {
   
     // Handle adding to calendar
     const handleAddToCalendar = () => {
-            
+      
       const reservationInfo = reservation || {
         restaurantName: restaurantName || 'Restaurant Reservation',
         date: date || 'Unknown date',
         time: time || 'Unknown time'
       };
       
-    
+      // Sample URL for Google Calendar (this is just for demonstration)
+      
       const eventTitle = `Reservation at ${reservationInfo.restaurantName}`;
       const eventDetails = `Your table for ${reservationInfo.guests} people is confirmed.`;
       
@@ -121,6 +123,7 @@ import {
       );
     };
   
+    // Handle cancellation
 // Handle cancellation
 const handleCancelReservation = () => {
     showPlatformAlert(

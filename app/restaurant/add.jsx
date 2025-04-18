@@ -30,6 +30,7 @@ const AddRestaurant = () => {
     options = {}
   ) => {
     if (Platform.OS === "web") {
+      // Web implementation with confirm-based workaround
       const buttonLabels = buttons.map(b => b.text).join(' / ');
       const confirmation = window.confirm(
         `${title}\n\n${message}\n\n${buttonLabels}`

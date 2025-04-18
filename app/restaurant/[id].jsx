@@ -193,7 +193,6 @@ const RestaurantDetails = () => {
               </Text>
             </View>
 
-            {/* display actual reviews here */}
             <Text style={styles.emptyStateText}>
               No reviews yet. Be the first to review!
             </Text>

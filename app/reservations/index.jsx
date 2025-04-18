@@ -224,7 +224,7 @@ const Reservations = () => {
           cancelAction();
         }
       } else {
-        // Simple alert without confirmation
+        // alert without confirmation
         window.alert(`${title}\n\n${message}`);
       }
     } else {

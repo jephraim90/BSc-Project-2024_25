@@ -2,15 +2,8 @@
 import databaseService from './databaseService';
 import { Alert } from 'react-native';
 
-/**
- * Service for handling restaurant reservations
- */
 const ReservationService = {
-  /**
-   * Create a new reservation
-   * @param {Object} reservationData - The reservation data
-   * @returns {Promise<Object>} Result object with success/error information
-   */
+
   async createReservation(reservationData) {
     try {
       // Validation
@@ -52,12 +45,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Get reservations for a specific user
-   * @param {string} userId - The user ID
-   * @param {boolean} includeCompleted - Whether to include completed reservations
-   * @returns {Promise<Object>} Result object with reservations data
-   */
+
   async getUserReservations(userId, includeCompleted = false) {
     try {
       if (!userId) {
@@ -95,12 +83,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Get reservations for a specific restaurant
-   * @param {string} restaurantId - The restaurant ID
-   * @param {string} date - Optional date filter (YYYY-MM-DD)
-   * @returns {Promise<Object>} Result object with reservations data
-   */
+
   async getRestaurantReservations(restaurantId, date = null) {
     try {
       if (!restaurantId) {
@@ -138,11 +121,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Get a reservation by ID
-   * @param {string} reservationId - The reservation ID
-   * @returns {Promise<Object>} Result object with reservation data
-   */
+
   async getReservationById(reservationId) {
     try {
       if (!reservationId) {
@@ -162,12 +141,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Update a reservation
-   * @param {string} reservationId - The reservation ID
-   * @param {Object} updatedData - The data to update
-   * @returns {Promise<Object>} Result object with success/error information
-   */
+
   async updateReservation(reservationId, updatedData) {
     try {
       if (!reservationId) {
@@ -191,12 +165,7 @@ const ReservationService = {
       };
     }
   },
-  
-  /**
-   * Cancel a reservation
-   * @param {string} reservationId - The reservation ID
-   * @returns {Promise<Object>} Result object with success/error information
-   */
+
   async cancelReservation(reservationId) {
     try {
       if (!reservationId) {
@@ -258,14 +227,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Check available time slots for a restaurant on a specific date
-   * @param {string} restaurantId - The restaurant ID
-   * @param {string} date - The date (YYYY-MM-DD)
-   * @param {number} partySize - Number of guests
-   * @returns {Promise<Object>} Result object with available time slots
-   */
-  async checkAvailability(restaurantId, date, partySize = 2) {
+   async checkAvailability(restaurantId, date, partySize = 2) {
     try {
       if (!restaurantId || !date) {
         throw new Error('Restaurant ID and date are required');
@@ -341,13 +303,7 @@ const ReservationService = {
     }
   },
   
-  /**
-   * Generate time slots between opening and closing times
-   * @param {string} openTime - Opening time (HH:MM)
-   * @param {string} closeTime - Closing time (HH:MM)
-   * @param {number} intervalMinutes - Interval between slots in minutes
-   * @returns {Array<string>} Array of time slots
-   */
+
   generateTimeSlots(openTime, closeTime, intervalMinutes = 30) {
     const slots = [];
     const [openHour, openMinute] = openTime.split(':').map(Number);
@@ -373,13 +329,10 @@ const ReservationService = {
     
     return slots;
   },
-  
-
-  combineDateTime(dateStr, timeStr) {
+    combineDateTime(dateStr, timeStr) {
     // Parse date
     const [year, month, day] = dateStr.split('-').map(Number);
-    
-    // Parse time
+        // Parse time
     let hours = 0;
     let minutes = 0;
     
@@ -388,16 +341,14 @@ const ReservationService = {
       hours = parseInt(timeMatch[1]);
       minutes = parseInt(timeMatch[2]);
       const period = timeMatch[3].toUpperCase();
-      
-      // Convert to 24-hour format
+            // Convert to 24-hour format
       if (period === 'PM' && hours < 12) {
         hours += 12;
       } else if (period === 'AM' && hours === 12) {
         hours = 0;
       }
     }
-    
-    // Create and return date object
+        // Create and return date object
     return new Date(year, month - 1, day, hours, minutes);
   }
 };

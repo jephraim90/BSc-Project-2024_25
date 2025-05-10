@@ -10,6 +10,10 @@ dist/
 web-build/
 expo-env.d.ts
 
+ios/
+android/
+
+
 # Native
 *.orig.*
 *.jks
@@ -17,9 +21,6 @@ expo-env.d.ts
 *.p12
 *.key
 *.mobileprovision
-
-envCheck.js
-seedRestaurant.js
 
 # Metro
 .metro-health-check*
@@ -40,3 +41,5 @@ yarn-error.*
 *.tsbuildinfo
 
 app-example
+serviceAccountKey.json
+

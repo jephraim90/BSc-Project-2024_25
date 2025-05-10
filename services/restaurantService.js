@@ -9,7 +9,7 @@ const RestaurantService = {
       console.log(`Restaurant created with ID: ${result.id}`);
       return result;
     } else {
-      console.error('Failed to create restaurant:', result.error);
+      console.log('Failed to create restaurant:', result.error);
       throw new Error(result.error);
     }
   },
@@ -37,21 +37,26 @@ const RestaurantService = {
   },
     
   async getRestaurantById(id) {
-    const result = await databaseService.getDocumentById('restaurants', id);
-    
-    if (!result.success) {
-      console.error('Failed to fetch restaurant:', result.error);
-      throw new Error(result.error);
+    try {
+      // console.log("[RestaurantService] Getting restaurant by ID:", id);
+      const result = await databaseService.getDocumentById('restaurants', id);
+      // console.log("[RestaurantService] Database service result:", result);
+      return result;
+    } catch (error) {
+      console.log("[RestaurantService] Error fetching restaurant:", error);
+      return {
+        data: null,
+        success: false,
+        error: error.message
+      };
     }
-    
-    return result.data;
   },
  
   async updateRestaurant(id, updatedData) {
     const result = await databaseService.updateDocument('restaurants', id, updatedData);
     
     if (!result.success) {
-      console.error('Failed to update restaurant:', result.error);
+      console.log('Failed to update restaurant:', result.error);
       throw new Error(result.error);
     }
     
@@ -62,7 +67,7 @@ const RestaurantService = {
     const result = await databaseService.deleteDocument('restaurants', id);
     
     if (!result.success) {
-      console.error('Failed to delete restaurant:', result.error);
+      console.log('Failed to delete restaurant:', result.error);
       throw new Error(result.error);
     }
     
@@ -79,7 +84,7 @@ const RestaurantService = {
       console.log("The restaurant Object", result);
       return result.data;
     } catch (error) {
-      console.error('Error fetching owner restaurants:', error);
+      console.log('Error fetching owner restaurants:', error);
       throw new Error('Failed to fetch your restaurants');
     }
   },
@@ -121,7 +126,7 @@ const RestaurantService = {
       
       return totalReservations;
     } catch (error) {
-      console.error('Error fetching today\'s reservations count:', error);
+      console.log('Error fetching today\'s reservations count:', error);
       return 0; // Return 0 on error rather than throwing
     }
   },
@@ -160,7 +165,7 @@ const RestaurantService = {
       
       return allReservations;
     } catch (error) {
-      console.error('Error fetching owner reservations:', error);
+      console.log('Error fetching owner reservations:', error);
       throw new Error('Failed to fetch your reservations');
     }
   }

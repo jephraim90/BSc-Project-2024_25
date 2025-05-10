@@ -71,7 +71,7 @@ const EditRestaurantMenu = () => {
         setMenuSections(data.menuSections || []);
         
       } catch (error) {
-        console.error('Error fetching restaurant:', error);
+        console.log('Error fetching restaurant:', error);
         Alert.alert('Error', 'Failed to load restaurant data');
       } finally {
         setLoading(false);

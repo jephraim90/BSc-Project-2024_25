@@ -7,11 +7,17 @@ import {
   TouchableOpacity,
   SafeAreaView,
   ActivityIndicator,
+  Platform,
+  Alert,
+  FlatList,
 } from "react-native";
 import React, { useState, useEffect } from "react";
 import { useLocalSearchParams, useRouter } from "expo-router";
 import { Ionicons } from "@expo/vector-icons";
 import RestaurantService from "@/services/restaurantService";
+import favouritesService from "@/services/favouritesService";
+import reviewService from "@/services/reviewService";
+import { getAuth, onAuthStateChanged } from "firebase/auth";
 
 const RestaurantDetails = () => {
   const router = useRouter();
@@ -20,17 +26,89 @@ const RestaurantDetails = () => {
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState("overview");
   const [isFavorite, setIsFavorite] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  const [favoriteLoading, setFavoriteLoading] = useState(false);
+  const [reviews, setReviews] = useState([]);
+  const [reviewsLoading, setReviewsLoading] = useState(false);
+  const [userReview, setUserReview] = useState(null);
+  const [isOwner, setIsOwner] = useState(false);
 
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
+  // Check if the user is the owner of the restaurant
+  useEffect(() => {
+    const checkOwnership = () => {
+      if (isAuthenticated && restaurant) {
+        const auth = getAuth();
+        const user = auth.currentUser;
+        setIsOwner(user && restaurant.ownerId === user.uid);
+      } else {
+        setIsOwner(false);
+      }
+    };
+
+    checkOwnership();
+  }, [isAuthenticated, restaurant]);
+  // Check authentication status
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user); // Convert user object to boolean
+    });
+    return () => unsubscribe(); // Cleanup on unmount
+  }, []);
+
+  // Fetch restaurant details
   useEffect(() => {
     const fetchRestaurantDetails = async () => {
       try {
+        // console.log("Fetching restaurant with ID:", id);
         setLoading(true);
         const result = await RestaurantService.getRestaurantById(id);
-        if (result) {
-          setRestaurant(result);
+        // console.log("Restaurant fetch result:", result);
+
+        if (result && result.data) {
+          // console.log("Setting restaurant data:", result.data);
+          setRestaurant(result.data);
+        } else {
+          console.log("Restaurant data not found in result");
         }
       } catch (error) {
-        console.error("Error fetching restaurant details:", error);
+        console.log("Error fetching restaurant details:", error);
       } finally {
         setLoading(false);
       }
@@ -40,6 +118,148 @@ const RestaurantDetails = () => {
       fetchRestaurantDetails();
     }
   }, [id]);
+
+  // Check favorite status when authenticated and restaurant ID is available
+  useEffect(() => {
+    const checkFavoriteStatus = async () => {
+      if (isAuthenticated && id) {
+        try {
+          const favoriteStatus = await favouritesService.checkIsFavorite(id);
+          setIsFavorite(favoriteStatus.isFavorite);
+        } catch (error) {
+          console.log("Error checking favorite status:", error);
+        }
+      }
+    };
+
+    checkFavoriteStatus();
+  }, [isAuthenticated, id]);
+
+  // Fetch reviews for this restaurant
+  useEffect(() => {
+    const fetchReviews = async () => {
+      if (id && activeTab === "reviews") {
+        try {
+          setReviewsLoading(true);
+          const result = await reviewService.getRestaurantReviews(id);
+
+          if (result.success) {
+            setReviews(result.data);
+          }
+
+          // If authenticated, check if user has reviewed this restaurant
+          if (isAuthenticated) {
+            const userReviewResult =
+              await reviewService.getUserReviewForRestaurant(id);
+            if (userReviewResult.success && userReviewResult.data) {
+              setUserReview(userReviewResult.data);
+            } else {
+              setUserReview(null);
+            }
+          }
+        } catch (error) {
+          console.log("Error fetching reviews:", error);
+        } finally {
+          setReviewsLoading(false);
+        }
+      }
+    };
+
+    fetchReviews();
+  }, [id, activeTab, isAuthenticated]);
+
+  const handleToggleFavorite = async () => {
+    // If not authenticated, prompt to login
+    if (!isAuthenticated) {
+      showPlatformAlert(
+        "Login Required",
+        "Please login to save favorites",
+        () => router.push("/auth"),
+        () => {} // Cancel handler
+      );
+      return;
+    }
+
+    try {
+      setFavoriteLoading(true);
+      const result = await favouritesService.toggleFavorite(id);
+
+      if (result.success) {
+        setIsFavorite(result.isFavorite);
+        // Show platform-appropriate feedback
+        showPlatformAlert(
+          result.isFavorite ? "Added to favorites" : "Removed from favorites",
+          "",
+          null // No confirmation needed
+        );
+      } else {
+        console.log("Error toggling favorite:", result.error);
+        showPlatformAlert("Error", "Could not update favorites");
+      }
+    } catch (error) {
+      console.log("Error in favorite toggle:", error);
+      showPlatformAlert("Error", "Could not update favorites");
+    } finally {
+      setFavoriteLoading(false);
+    }
+  };
+
+  const handleWriteReview = () => {
+    if (isOwner) {
+      showPlatformAlert(
+        "Cannot Review Own Restaurant",
+        "As the owner, you cannot review your own restaurant."
+      );
+      return;
+    }
+
+    if (!isAuthenticated) {
+      showPlatformAlert(
+        "Login Required",
+        "Please login to write a review",
+        () => router.push("/login"),
+        () => {} // Cancel handler
+      );
+      return;
+    }
+
+    router.push(`/review/create?restaurantId=${id}`);
+  };
+  const handleDeleteReview = async (reviewId) => {
+    showPlatformAlert(
+      "Delete Review",
+      "Are you sure you want to delete your review?",
+      async () => {
+        try {
+          const result = await reviewService.deleteReview(reviewId);
+
+          if (result.success) {
+            // Refresh restaurant data to update rating
+            const restaurantResult = await RestaurantService.getRestaurantById(
+              id
+            );
+            if (restaurantResult && restaurantResult.data) {
+              setRestaurant(restaurantResult.data);
+            }
+
+            // Refresh reviews
+            const reviewsResult = await reviewService.getRestaurantReviews(id);
+            if (reviewsResult.success) {
+              setReviews(reviewsResult.data);
+            }
+
+            setUserReview(null);
+            showPlatformAlert("Success", "Your review has been deleted");
+          } else {
+            showPlatformAlert("Error", "Failed to delete your review");
+          }
+        } catch (error) {
+          console.log("Error deleting review:", error);
+          showPlatformAlert("Error", "Failed to delete your review");
+        }
+      }
+    );
+  };
 
   const renderStars = (rating) => {
     const stars = [];
@@ -87,6 +307,84 @@ const RestaurantDetails = () => {
     );
   };
 
+  const renderReviewItem = ({ item }) => {
+    const isUserReview = userReview && item.id === userReview.id;
+
+    // Define a default formatted date
+    let formattedDate = "Unknown date";
+
+    if (item.createdAt) {
+      try {
+        let date;
+
+        // Check if it's a Firestore Timestamp object
+        if (
+          item.createdAt &&
+          typeof item.createdAt === "object" &&
+          "seconds" in item.createdAt &&
+          "nanoseconds" in item.createdAt
+        ) {
+          // Convert Firestore Timestamp to JavaScript Date
+          date = new Date(item.createdAt.seconds * 1000);
+        } else {
+          // Try normal date parsing if it's not a Firestore Timestamp
+          date = new Date(item.createdAt);
+        }
+
+        // Check if date is valid after our attempts
+        if (!isNaN(date.getTime())) {
+          formattedDate = `${date.toLocaleDateString()} at ${date.toLocaleTimeString(
+            [],
+            { hour: "2-digit", minute: "2-digit" }
+          )}`;
+        } else {
+          // If we still don't have a valid date, show a fallback
+          formattedDate = "Date not available";
+        }
+      } catch (error) {
+        console.log("Error formatting date:", error);
+        formattedDate = "Date not available";
+      }
+    }
+
+    return (
+      <View style={[styles.reviewItem, isUserReview && styles.userReviewItem]}>
+        <View style={styles.reviewHeader}>
+          <View>
+            <Text style={styles.reviewTitle}>{item.title}</Text>
+            <View style={styles.reviewRatingRow}>
+              {renderStars(item.rating)}
+              <Text style={styles.reviewerName}>
+                by {item.userDisplayName || "Anonymous"}
+              </Text>
+            </View>
+          </View>
+
+          {isUserReview && (
+            <View style={styles.reviewActions}>
+              <TouchableOpacity
+                onPress={() =>
+                  router.push(`/review/create?restaurantId=${id}&edit=true`)
+                }
+                style={styles.editButton}
+              >
+                <Ionicons name="pencil" size={18} color="#666" />
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={() => handleDeleteReview(item.id)}
+                style={styles.deleteButton}
+              >
+                <Ionicons name="trash" size={18} color="#666" />
+              </TouchableOpacity>
+            </View>
+          )}
+        </View>
+
+        <Text style={styles.reviewDate}>{formattedDate}</Text>
+        <Text style={styles.reviewText}>{item.text}</Text>
+      </View>
+    );
+  };
   if (loading) {
     return (
       <View
@@ -184,22 +482,52 @@ const RestaurantDetails = () => {
         return (
           <View style={styles.tabContent}>
             <View style={styles.reviewSummary}>
-              <Text style={styles.reviewRating}>
-                {restaurant.rating.toFixed(1)}
+              <Text style={styles.reviewRatingLarge}>
+                {restaurant.rating ? restaurant.rating.toFixed(1) : "0.0"}
               </Text>
-              {renderStars(restaurant.rating)}
+              {renderStars(restaurant.rating || 0)}
               <Text style={styles.reviewCount}>
-                Based on {restaurant.reviews} reviews
+                Based on {restaurant.reviews || 0}{" "}
+                {restaurant.reviews === 1 ? "review" : "reviews"}
               </Text>
             </View>
 
-            <Text style={styles.emptyStateText}>
-              No reviews yet. Be the first to review!
-            </Text>
+            {reviewsLoading ? (
+              <View style={styles.loadingContainer}>
+                <ActivityIndicator size="small" color="#007aff" />
+                <Text style={{ marginTop: 10 }}>Loading reviews...</Text>
+              </View>
+            ) : reviews.length > 0 ? (
+              <FlatList
+                data={reviews}
+                renderItem={renderReviewItem}
+                keyExtractor={(item) => item.id}
+                scrollEnabled={false}
+                style={styles.reviewsList}
+              />
+            ) : (
+              <Text style={styles.emptyStateText}>
+                No reviews yet. Be the first to review!
+              </Text>
+            )}
 
-            <TouchableOpacity style={styles.writeReviewButton}>
-              <Text style={styles.writeReviewButtonText}>Write a Review</Text>
-            </TouchableOpacity>
+            {!isOwner && (
+              <TouchableOpacity
+                style={styles.writeReviewButton}
+                onPress={handleWriteReview}
+              >
+                <Text style={styles.writeReviewButtonText}>
+                  {userReview ? "Edit Your Review" : "Write a Review"}
+                </Text>
+              </TouchableOpacity>
+            )}
+            {isOwner && (
+              <View style={styles.ownerMessageContainer}>
+                <Text style={styles.ownerMessageText}>
+                  As the owner, you cannot review your own restaurant.
+                </Text>
+              </View>
+            )}
           </View>
         );
       default:
@@ -210,7 +538,7 @@ const RestaurantDetails = () => {
   return (
     <SafeAreaView style={styles.container}>
       <ScrollView showsVerticalScrollIndicator={false}>
-        {/* Restaurant Images Carousel (simplified) */}
+        {/* Restaurant Images Carousel */}
         <View style={styles.imageContainer}>
           <Image
             source={{
@@ -230,13 +558,18 @@ const RestaurantDetails = () => {
 
           <TouchableOpacity
             style={styles.favoriteButton}
-            onPress={() => setIsFavorite(!isFavorite)}
+            onPress={handleToggleFavorite}
+            disabled={favoriteLoading}
           >
-            <Ionicons
-              name={isFavorite ? "heart" : "heart-outline"}
-              size={24}
-              color={isFavorite ? "#FF6B6B" : "#fff"}
-            />
+            {favoriteLoading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Ionicons
+                name={isFavorite ? "heart" : "heart-outline"}
+                size={24}
+                color={isFavorite ? "#FF6B6B" : "#fff"}
+              />
+            )}
           </TouchableOpacity>
         </View>
 
@@ -245,9 +578,11 @@ const RestaurantDetails = () => {
           <Text style={styles.restaurantName}>{restaurant.name}</Text>
 
           <View style={styles.ratingContainer}>
-            {renderStars(restaurant.rating)}
+            {renderStars(restaurant.rating || 0)}
             <Text style={styles.ratingText}>
-              {restaurant.rating.toFixed(1)} ({restaurant.reviews} reviews)
+              {restaurant.rating ? restaurant.rating.toFixed(1) : "0.0"} (
+              {restaurant.reviews || 0}{" "}
+              {restaurant.reviews === 1 ? "review" : "reviews"})
             </Text>
           </View>
 

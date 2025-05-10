@@ -59,7 +59,7 @@ const AdminReservation = () => {
         Alert.alert("Error", "Failed to load restaurants");
       }
     } catch (error) {
-      console.error("Error fetching restaurants:", error);
+      console.log("Error fetching restaurants:", error);
       Alert.alert("Error", "An unexpected error occurred");
     }
   };
@@ -106,7 +106,7 @@ const AdminReservation = () => {
         Alert.alert("Error", result.error || "Failed to load reservations");
       }
     } catch (error) {
-      console.error("Error fetching reservations:", error);
+      console.log("Error fetching reservations:", error);
       Alert.alert("Error", "An unexpected error occurred");
     } finally {
       setLoading(false);
@@ -138,7 +138,7 @@ const AdminReservation = () => {
         Alert.alert("Error", result.error || "Failed to update reservation");
       }
     } catch (error) {
-      console.error("Error updating reservation status:", error);
+      console.log("Error updating reservation status:", error);
       Alert.alert("Error", "An unexpected error occurred");
     }
   };

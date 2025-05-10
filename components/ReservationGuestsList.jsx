@@ -50,7 +50,7 @@ import {
               }
               return null;
             } catch (err) {
-              console.error(`Error fetching user ${userId}:`, err);
+              console.log(`Error fetching user ${userId}:`, err);
               return null;
             }
           });
@@ -58,7 +58,7 @@ import {
           const guestResults = await Promise.all(guestPromises);
           setGuests(guestResults.filter(guest => guest !== null));
         } catch (err) {
-          console.error('Error fetching reservation guests:', err);
+          console.log('Error fetching reservation guests:', err);
           setError(err.message || 'Failed to load guests');
         } finally {
           setLoading(false);

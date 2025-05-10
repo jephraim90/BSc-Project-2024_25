@@ -32,7 +32,7 @@ const RestaurantHoursService = {
         error: null
       };
     } catch (error) {
-      console.error('Error updating business hours:', error);
+      console.log('Error updating business hours:', error);
       return {
         success: false,
         error: error.message
@@ -59,7 +59,7 @@ const RestaurantHoursService = {
         error: null
       };
     } catch (error) {
-      console.error('Error fetching business hours:', error);
+      console.log('Error fetching business hours:', error);
       return {
         data: this.generateDefaultHours(),
         success: false,
@@ -136,7 +136,7 @@ const RestaurantHoursService = {
         error: null
       };
     } catch (error) {
-      console.error('Error adding special hours:', error);
+      console.log('Error adding special hours:', error);
       return {
         success: false,
         error: error.message
@@ -193,7 +193,7 @@ const RestaurantHoursService = {
         error: null
       };
     } catch (error) {
-      console.error('Error deleting special hours:', error);
+      console.log('Error deleting special hours:', error);
       return {
         success: false,
         error: error.message
@@ -233,7 +233,7 @@ const RestaurantHoursService = {
         error: null
       };
     } catch (error) {
-      console.error('Error fetching special hours:', error);
+      console.log('Error fetching special hours:', error);
       return {
         data: [],
         success: false,
@@ -557,20 +557,12 @@ const RestaurantHoursService = {
     }
   },
   
-  /**
-   * Check if a string is a valid time format (HH:MM)
-   * @param {string} timeStr - Time string
-   * @returns {boolean} True if valid
-   */
+ 
   isValidTimeFormat(timeStr) {
     return /^([01]?[0-9]|2[0-3]):[0-5][0-9]$/.test(timeStr);
   },
   
-  /**
-   * Check if a string is a valid date format (YYYY-MM-DD)
-   * @param {string} dateStr - Date string
-   * @returns {boolean} True if valid
-   */
+
   isValidDateFormat(dateStr) {
     return /^\d{4}-\d{2}-\d{2}$/.test(dateStr);
   }

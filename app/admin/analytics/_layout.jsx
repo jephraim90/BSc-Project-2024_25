@@ -1,11 +1,14 @@
 import { View, Text } from 'react-native'
+
 import React from 'react'
+import { AuthProvider } from '@/contexts/AuthContext';
+import { Stack } from 'expo-router';
 
 const AdminAnalyticsLayout = () => {
   return (
-    <View>
-      <Text>AdminAnalyticsLayout</Text>
-    </View>
+      <AuthProvider>
+          <Stack screenOptions={{headerShown: false}} />
+          </AuthProvider>
   )
 }
 

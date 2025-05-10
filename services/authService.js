@@ -31,7 +31,7 @@ export const signUp = async (email, password, role = 'user') => {
     console.log('User signed up with role:', role);
     return userCredential.user;
   } catch (error) {
-    console.error('Error signing up:', error.message);
+    console.log('Error signing up:', error.message);
     // Rollback auth creation if transaction fails
     if (auth.currentUser) await auth.currentUser.delete();
     throw error;
@@ -68,3 +68,4 @@ export const handleSignOut = async () => {
     throw error;
   }
 };
+export {handleSignOut as signOut}

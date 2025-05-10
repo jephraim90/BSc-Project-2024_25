@@ -57,7 +57,7 @@ const AdminUsersPage = () => {
         Alert.alert('Error', 'Failed to load users');
       }
     } catch (error) {
-      console.error('Error fetching users:', error);
+      console.log('Error fetching users:', error);
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -123,7 +123,7 @@ const AdminUsersPage = () => {
         Alert.alert('Error', 'Failed to update user role');
       }
     } catch (error) {
-      console.error('Error changing user role:', error);
+      console.log('Error changing user role:', error);
       Alert.alert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
@@ -167,7 +167,7 @@ const AdminUsersPage = () => {
                 Alert.alert('Error', `Failed to ${actionText} user account`);
               }
             } catch (error) {
-              console.error('Error toggling user status:', error);
+              console.log('Error toggling user status:', error);
               Alert.alert('Error', 'An unexpected error occurred');
             } finally {
               setLoading(false);
@@ -206,7 +206,7 @@ const AdminUsersPage = () => {
                 Alert.alert('Error', 'Failed to delete user account');
               }
             } catch (error) {
-              console.error('Error deleting user:', error);
+              console.log('Error deleting user:', error);
               Alert.alert('Error', 'An unexpected error occurred');
             } finally {
               setLoading(false);
@@ -252,16 +252,50 @@ const AdminUsersPage = () => {
   };
 
   // Format date for display
-  const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
-    const date = new Date(dateString);
-    return date.toLocaleDateString(undefined, { 
-      year: 'numeric', 
-      month: 'short', 
-      day: 'numeric'
-    });
+  const formatDate = (dateInput) => {
+    if (!dateInput) return 'N/A';
+    
+    try {
+      let date;
+      
+      // Handle different date formats
+      if (typeof dateInput === 'string') {
+        // Handle string formats
+        if (dateInput.includes('/')) {
+          // MM/DD/YYYY format
+          const [month, day, year] = dateInput.split('/').map(Number);
+          date = new Date(year, month - 1, day);
+        } else if (dateInput.includes('-')) {
+          // YYYY-MM-DD format
+          date = new Date(dateInput);
+        } else {
+          // Try parsing the string directly
+          date = new Date(dateInput);
+        }
+      } else if (dateInput.toDate) {
+        // Firestore timestamp
+        date = dateInput.toDate();
+      } else {
+        // Try as-is (if it's already a Date object)
+        date = new Date(dateInput);
+      }
+      
+      // Check if date is valid
+      if (isNaN(date.getTime())) {
+        console.log('Invalid date:', dateInput);
+        return 'Invalid Date';
+      }
+      
+      return date.toLocaleDateString(undefined, {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+      });
+    } catch (error) {
+      console.log('Error formatting date:', error, dateInput);
+      return 'Error';
+    }
   };
-
   // Get user initials for avatar
   const getUserInitials = (user) => {
     if (!user.displayName) return '?';
@@ -425,7 +459,7 @@ const AdminUsersPage = () => {
                     <Text style={[styles.userActionText, 
                       { color: user.status === 'active' ? "#E53935" : "#43A047" }
                     ]}>
-                      {user.status === 'active' ? 'Disable' : 'Enable'}
+                      {user.status === 'active' ? 'Disable' : 'Active'}
                     </Text>
                   </TouchableOpacity>
                   
@@ -517,25 +551,7 @@ const AdminUsersPage = () => {
                       <Text style={styles.userActionButtonText}>Change Role</Text>
                     </TouchableOpacity>
                     
-                    <TouchableOpacity 
-                      style={[
-                        styles.userActionButton,
-                        { backgroundColor: selectedUser.status === 'active' ? '#ffebee' : '#e8f5e9' }
-                      ]}
-                      onPress={() => toggleUserStatus(selectedUser)}
-                    >
-                      <Ionicons 
-                        name={selectedUser.status === 'active' ? "ban-outline" : "checkmark-circle-outline"} 
-                        size={20} 
-                        color={selectedUser.status === 'active' ? "#E53935" : "#43A047"} 
-                      />
-                      <Text style={[
-                        styles.userActionButtonText,
-                        { color: selectedUser.status === 'active' ? "#E53935" : "#43A047" }
-                      ]}>
-                        {selectedUser.status === 'active' ? 'Disable Account' : 'Enable Account'}
-                      </Text>
-                    </TouchableOpacity>
+                  
                     
                     <TouchableOpacity 
                       style={[styles.userActionButton, styles.deleteButton]}

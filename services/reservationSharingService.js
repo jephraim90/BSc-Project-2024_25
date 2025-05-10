@@ -112,7 +112,7 @@ const reservationSharingService = {
         }
       };
     } catch (error) {
-      console.error('Error sharing reservation:', error);
+      console.log('Error sharing reservation:', error);
       return {
         success: false,
         error: error.message
@@ -143,7 +143,7 @@ const reservationSharingService = {
         }
       };
     } catch (error) {
-      console.error('Error getting shared reservations:', error);
+      console.log('Error getting shared reservations:', error);
       return {
         success: false,
         error: error.message,
@@ -206,7 +206,7 @@ const reservationSharingService = {
       
       return updateResult;
     } catch (error) {
-      console.error('Error responding to invitation:', error);
+      console.log('Error responding to invitation:', error);
       return {
         success: false,
         error: error.message
@@ -239,7 +239,71 @@ const reservationSharingService = {
         cancelledAt: new Date().toISOString()
       });
     } catch (error) {
-      console.error('Error cancelling invitation:', error);
+      console.log('Error cancelling invitation:', error);
+      return {
+        success: false,
+        error: error.message
+      };
+    }
+  },
+  async checkIfSharedWithUser(reservationId, userId) {
+    try {
+      console.log(`Checking if reservation ${reservationId} is shared with user ${userId}`);
+      
+      // Get all of this user's received invitations
+      const receivedResult = await databaseService.getDocuments('shared_reservations', [
+        databaseService.queries.where('recipientId', '==', userId)
+      ]);
+      
+      console.log("Received invitations query result:", {
+        success: receivedResult.success,
+        count: receivedResult.data?.length || 0
+      });
+      
+      if (!receivedResult.success) {
+        console.log("Failed to fetch invitations", receivedResult.error);
+        return { success: false, error: "Failed to fetch invitations" };
+      }
+      
+      // Log all invitations for debugging
+      if (receivedResult.data && receivedResult.data.length > 0) {
+        receivedResult.data.forEach((invite, index) => {
+          console.log(`Invitation ${index + 1}:`, {
+            id: invite.id,
+            reservationId: invite.reservationId,
+            status: invite.status,
+            matches: invite.reservationId === reservationId
+          });
+        });
+        
+        // Check if any of them match the reservation ID
+        const matchingInvitation = receivedResult.data.find(
+          invite => invite.reservationId === reservationId
+        );
+        
+        console.log("Matching invitation found:", !!matchingInvitation);
+        if (matchingInvitation) {
+          console.log("Match details:", {
+            id: matchingInvitation.id,
+            status: matchingInvitation.status
+          });
+        }
+        
+        return {
+          success: true,
+          isShared: !!matchingInvitation,
+          invitation: matchingInvitation || null
+        };
+      }
+      
+      console.log("No invitations found for user");
+      return {
+        success: true,
+        isShared: false,
+        invitation: null
+      };
+    } catch (error) {
+      console.log('Error checking shared reservation:', error);
       return {
         success: false,
         error: error.message

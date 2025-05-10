@@ -37,6 +37,7 @@ import {
     const [specialRequests, setSpecialRequests] = useState('');
     const [availableTimes, setAvailableTimes] = useState([]);
     const [submitting, setSubmitting] = useState(false);
+    const [loadingTimes, setLoadingTimes] = useState(false);
   
     // Fetch restaurant data
     useEffect(() => {
@@ -57,7 +58,7 @@ import {
           // Generate available dates and times based on restaurant's business hours
           generateAvailableTimes(restaurantData);
         } catch (err) {
-          console.error('Error fetching restaurant:', err);
+          console.log('Error fetching restaurant:', err);
           setError(err.message || 'Failed to load restaurant');
         } finally {
           setLoading(false);
@@ -97,10 +98,7 @@ import {
     };
   
     // Generate available time slots based on restaurant's business hours
-    const generateAvailableTimes = (restaurantData) => {
-      // This is a simplified implementation - a real app would check actual availability
-      // against existing reservations and time slots
-      
+    const generateAvailableTimes = (restaurantData) => { 
       const defaultTimes = [
         '5:30 PM', '6:00 PM', '6:30 PM', '7:00 PM', 
         '7:30 PM', '8:00 PM', '8:30 PM', '9:00 PM'
@@ -108,9 +106,8 @@ import {
       
       // If restaurant has business hours, use them to generate available times
       if (restaurantData?.businessHours) {
-        // This would be more complex in a real app, checking the day of week
-        // and generating times within the restaurant's opening hours
-        // For now, we'll just use the default times
+        // check the day of week
+        // and generate times within the restaurant's opening hours
       }
       
       setAvailableTimes(defaultTimes);
@@ -191,7 +188,7 @@ import {
           throw new Error(result.error || 'Failed to create reservation');
         }
       } catch (err) {
-        console.error('Error creating reservation:', err);
+        console.log('Error creating reservation:', err);
         Alert.alert('Error', err.message || 'Failed to create reservation. Please try again.');
       } finally {
         setSubmitting(false);
@@ -322,31 +319,41 @@ import {
               </ScrollView>
             </View>
   
-            {/* Time Selection */}
-            <View style={styles.sectionContainer}>
-              <Text style={styles.sectionTitle}>Select Time</Text>
-              <View style={styles.timeContainer}>
-                {availableTimes.map((item, index) => (
-                  <TouchableOpacity 
-                    key={index} 
-                    style={[
-                      styles.timeItem,
-                      time === item && styles.selectedTimeItem
-                    ]}
-                    onPress={() => setTime(item)}
-                  >
-                    <Text 
-                      style={[
-                        styles.timeText,
-                        time === item && styles.selectedTimeText
-                      ]}
-                    >
-                      {item}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
-              </View>
-            </View>
+{/* Time Selection */}
+<View style={styles.sectionContainer}>
+    <Text style={styles.sectionTitle}>Select Time</Text>
+    <View style={styles.timeContainer}>
+      {loadingTimes ? ( // Add a state variable for loading times
+        <ActivityIndicator size="small" color="#0000ff" />
+      ) : availableTimes.length > 0 ? (
+        availableTimes.map((item, index) => (
+          <TouchableOpacity
+            key={index}
+            style={[
+              styles.timeItem,
+              time === item && styles.selectedTimeItem,
+            ]}
+            onPress={() => setTime(item)}
+          >
+            <Text
+              style={[
+                styles.timeText,
+                time === item && styles.selectedTimeText,
+              ]}
+            >
+              {item}
+            </Text>
+          </TouchableOpacity>
+        ))
+      ) : (
+        <Text style={styles.noTimesText}>
+          {date
+            ? "No available times for selected date"
+            : "Select a date to see available times"}
+        </Text>
+      )}
+    </View>
+  </View>
   
             {/* Party Size */}
             <View style={styles.sectionContainer}>

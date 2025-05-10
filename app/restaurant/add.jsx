@@ -255,7 +255,7 @@ updatedAt: serverTimestamp()
           
           <Text style={styles.formLabel}>Price Range</Text>
           <View style={styles.priceRangeContainer}>
-            {['$', '$$', '$$$', '$$$$'].map((price) => (
+            {['£', '££', '£££', '££££'].map((price) => (
               <TouchableOpacity
                 key={price}
                 style={[

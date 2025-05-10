@@ -2,44 +2,27 @@ import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
-  StyleSheet,
   SafeAreaView,
   ScrollView,
   TouchableOpacity,
   TextInput,
   Image,
-  Modal,
-  Alert,
   ActivityIndicator,
-  FlatList
+  FlatList,
+  StyleSheet,
+  Platform
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import databaseService from '@/services/databaseService';
 import { useRouter } from 'expo-router';
+
 const AdminRestaurantPage = () => {
-    const router = useRouter()
-  // State management
+  const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [restaurants, setRestaurants] = useState([]);
-  const [selectedRestaurant, setSelectedRestaurant] = useState(null);
-  const [modalVisible, setModalVisible] = useState(false);
-  const [editModalVisible, setEditModalVisible] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [filterCategory, setFilterCategory] = useState('all');
 
-  // Form state for adding/editing restaurant
-  const [formData, setFormData] = useState({
-    name: '',
-    address: '',
-    category: '',
-    description: '',
-    phone: '',
-    imageUrl: '',
-    openingHours: {},
-    maxCapacity: 20
-  });
-
-  // Categories for filtering
   const categories = [
     'all',
     'italian',
@@ -52,83 +35,102 @@ const AdminRestaurantPage = () => {
     'french'
   ];
 
-  // Fetch restaurants on component mount
   useEffect(() => {
     fetchRestaurants();
   }, []);
 
-  // Fetch restaurants from Firebase
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
+
   const fetchRestaurants = async () => {
     setLoading(true);
     try {
       const result = await databaseService.getDocuments('restaurants');
-      
       if (result.success) {
         setRestaurants(result.data);
       } else {
-        Alert.alert('Error', 'Failed to load restaurants');
+        showPlatformAlert('Error', 'Failed to load restaurants');
       }
     } catch (error) {
-      console.error('Error fetching restaurants:', error);
-      Alert.alert('Error', 'An unexpected error occurred');
+      console.log('Error fetching restaurants:', error);
+      showPlatformAlert('Error', 'An unexpected error occurred');
     } finally {
       setLoading(false);
     }
   };
 
-  // Filter restaurants based on search and category
   const filteredRestaurants = restaurants.filter(restaurant => {
     const matchesSearch = restaurant.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                           restaurant.address.toLowerCase().includes(searchQuery.toLowerCase());
     const matchesCategory = filterCategory === 'all' || restaurant.category === filterCategory;
-    
     return matchesSearch && matchesCategory;
   });
 
-  // Handle deleting a restaurant
   const handleDeleteRestaurant = async (restaurantId) => {
-    Alert.alert(
+    showPlatformAlert(
       'Confirm Deletion',
       'Are you sure you want to delete this restaurant? This action cannot be undone.',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel'
-        },
-        {
-          text: 'Delete',
-          style: 'destructive',
-          onPress: async () => {
-            setLoading(true);
-            try {
-              const result = await databaseService.deleteDocument('restaurants', restaurantId);
-              
-              if (result.success) {
-                Alert.alert('Success', 'Restaurant deleted successfully');
-                fetchRestaurants();
-              } else {
-                Alert.alert('Error', result.error || 'Failed to delete restaurant');
-              }
-            } catch (error) {
-              console.error('Error deleting restaurant:', error);
-              Alert.alert('Error', 'An unexpected error occurred');
-            } finally {
-              setLoading(false);
-            }
+      async () => {
+        setLoading(true);
+        try {
+          const result = await databaseService.deleteDocument('restaurants', restaurantId);
+          if (result.success) {
+            showPlatformAlert('Success', 'Restaurant deleted successfully');
+            fetchRestaurants();
+          } else {
+            showPlatformAlert('Error', result.error || 'Failed to delete restaurant');
           }
+        } catch (error) {
+          console.log('Error deleting restaurant:', error);
+          showPlatformAlert('Error', 'An unexpected error occurred');
+        } finally {
+          setLoading(false);
         }
-      ]
+      }
     );
   };
 
-  // Render restaurant item in list
   const renderRestaurantItem = ({ item }) => (
     <View style={styles.restaurantItem}>
       <View style={styles.restaurantImageContainer}>
         {item.imageUrl ? (
           <Image 
             source={{ uri: item.imageUrl }} 
-            style={styles.restaurantImage} 
+            style={styles.restaurantImage}
             resizeMode="cover" 
           />
         ) : (
@@ -181,7 +183,6 @@ const AdminRestaurantPage = () => {
           <Text style={styles.subheading}>Manage and monitor all restaurants in your platform</Text>
         </View>
         
-        {/* Search and Filter */}
         <View style={styles.searchContainer}>
           <View style={styles.searchBar}>
             <Ionicons name="search" size={20} color="#555" />
@@ -191,11 +192,11 @@ const AdminRestaurantPage = () => {
               value={searchQuery}
               onChangeText={setSearchQuery}
             />
-            {searchQuery ? (
+            {searchQuery && (
               <TouchableOpacity onPress={() => setSearchQuery('')}>
                 <Ionicons name="close-circle" size={20} color="#555" />
               </TouchableOpacity>
-            ) : null}
+            )}
           </View>
           
           <View style={styles.categoryFilter}>
@@ -209,12 +210,10 @@ const AdminRestaurantPage = () => {
                   ]}
                   onPress={() => setFilterCategory(category)}
                 >
-                  <Text 
-                    style={[
-                      styles.chipText,
-                      filterCategory === category && styles.selectedChipText
-                    ]}
-                  >
+                  <Text style={[
+                    styles.chipText,
+                    filterCategory === category && styles.selectedChipText
+                  ]}>
                     {category.charAt(0).toUpperCase() + category.slice(1)}
                   </Text>
                 </TouchableOpacity>
@@ -223,7 +222,6 @@ const AdminRestaurantPage = () => {
           </View>
         </View>
         
-        {/* Add Restaurant Button */}
         <View style={styles.ctaWrapper}>
           <TouchableOpacity 
             style={styles.addButton}
@@ -233,7 +231,6 @@ const AdminRestaurantPage = () => {
           </TouchableOpacity>
         </View>
         
-        {/* Restaurant List */}
         {loading ? (
           <View style={styles.loadingContainer}>
             <ActivityIndicator size="large" color="#1a1a1a" />
@@ -258,8 +255,6 @@ const AdminRestaurantPage = () => {
             </Text>
           </View>
         )}
-
-       
       </ScrollView>
     </SafeAreaView>
   );

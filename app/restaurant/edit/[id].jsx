@@ -38,54 +38,94 @@ const EditRestaurant = () => {
   const [errors, setErrors] = useState({});
   const [restaurant, setRestaurant] = useState(null);
   const [hasPermission, setHasPermission] = useState(false);
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
   
   useEffect(() => {
     const fetchRestaurant = async () => {
-      try {
-        setLoading(true);
-        const data = await RestaurantService.getRestaurantById(id);
+        try {
+            setLoading(true);
+            const response = await RestaurantService.getRestaurantById(id); // Fetch the entire response
+            console.log("The data is :", response);
+
+            if (!response || !response.data) { // Check for the response and response.data
+                Alert.alert('Error', 'Restaurant not found');
+                router.back();
+                return;
+            }
+
+            const data = response.data; // Extract the restaurant data
         
-        if (!data) {
-          Alert.alert('Error', 'Restaurant not found');
-          router.back();
-          return;
+            setRestaurant(data);
+
+            // Check if user has permission to edit this restaurant
+            const isOwner = data.ownerId === user?.uid; 
+            const isAdmin = user?.role === 'admin';
+            console.log("Your user id is :", user?.uid);
+            console.log("The owner id is : ", data.ownerId);
+            if (!isOwner && !isAdmin) {
+                setHasPermission(false);
+                return;
+            }
+
+            setHasPermission(true);
+
+            // Populate form fields
+            setName(data.name || '');
+            setCuisine(data.cuisine || '');
+            setPriceRange(data.priceRange || '$$');
+            setDescription(data.description || '');
+            setAddress(data.address || '');
+            setPhone(data.phone || '');
+            setSpecialties(data.specialties ? data.specialties.join(', ') : '');
+            setImageUrl(data.images && data.images.length > 0 ? data.images[0] : '');
+
+        } catch (error) {
+            console.log('Error fetching restaurant:', error);
+            Alert.alert('Error', 'Failed to load restaurant data');
+        } finally {
+            setLoading(false);
         }
-        
-        setRestaurant(data);
-        
-        // Check if user has permission to edit this restaurant
-        const isOwner = data.ownerId === user?.uid;
-        const isAdmin = user?.role === 'admin';
-        
-        if (!isOwner && !isAdmin) {
-          setHasPermission(false);
-          return;
-        }
-        
-        setHasPermission(true);
-        
-        // Populate form fields
-        setName(data.name || '');
-        setCuisine(data.cuisine || '');
-        setPriceRange(data.priceRange || '$$');
-        setDescription(data.description || '');
-        setAddress(data.address || '');
-        setPhone(data.phone || '');
-        setSpecialties(data.specialties ? data.specialties.join(', ') : '');
-        setImageUrl(data.images && data.images.length > 0 ? data.images[0] : '');
-        
-      } catch (error) {
-        console.error('Error fetching restaurant:', error);
-        Alert.alert('Error', 'Failed to load restaurant data');
-      } finally {
-        setLoading(false);
-      }
     };
-    
+
     if (id && user) {
-      fetchRestaurant();
+        fetchRestaurant();
     }
-  }, [id, user]);
+}, [id, user]);
   
   const handleSubmit = async () => {
     // Reset errors
@@ -230,7 +270,7 @@ const EditRestaurant = () => {
           
           <Text style={styles.formLabel}>Price Range</Text>
           <View style={styles.priceRangeContainer}>
-            {['$', '$$', '$$$', '$$$$'].map((price) => (
+            {['£', '££', '£££', '££££'].map((price) => (
               <TouchableOpacity
                 key={price}
                 style={[
@@ -355,48 +395,38 @@ const EditRestaurant = () => {
           
           {/* Danger Zone */}
           <View style={styles.dangerZone}>
-            <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
-            
-            <TouchableOpacity 
-              style={styles.deleteButton}
-              onPress={() => {
-                Alert.alert(
-                  'Delete Restaurant',
-                  'Are you sure you want to delete this restaurant? This action cannot be undone.',
-                  [
-                    {
-                      text: 'Cancel',
-                      style: 'cancel',
-                    },
-                    {
-                      text: 'Delete',
-                      style: 'destructive',
-                      onPress: async () => {
-                        try {
-                          setSaving(true);
-                          const result = await RestaurantService.deleteRestaurant(id);
-                          if (result.success) {
-                            Alert.alert('Success', 'Restaurant deleted successfully');
-                            router.replace('/profile');
-                          } else {
-                            Alert.alert('Error', result.error || 'Failed to delete restaurant');
-                          }
-                        } catch (error) {
-                          Alert.alert('Error', error.message || 'Failed to delete restaurant');
-                        } finally {
-                          setSaving(false);
-                        }
-                      },
-                    },
-                  ],
-                  { cancelable: true }
-                );
-              }}
-            >
-              <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
-              <Text style={styles.deleteButtonText}>Delete Restaurant</Text>
-            </TouchableOpacity>
-          </View>
+    <Text style={styles.dangerZoneTitle}>Danger Zone</Text>
+    
+    <TouchableOpacity 
+      style={styles.deleteButton}
+      onPress={() => {
+        showPlatformAlert(
+          'Delete Restaurant',
+          'Are you sure you want to delete this restaurant? This action cannot be undone.',
+          async () => {
+            try {
+              setSaving(true);
+              const result = await RestaurantService.deleteRestaurant(id);
+              if (result.success) {
+                showPlatformAlert('Success', 'Restaurant deleted successfully');
+                router.replace('/profile');
+              } else {
+                showPlatformAlert('Error', result.error || 'Failed to delete restaurant');
+              }
+            } catch (error) {
+              showPlatformAlert('Error', error.message || 'Failed to delete restaurant');
+            } finally {
+              setSaving(false);
+            }
+          }
+        );
+      }}
+    >
+      <Ionicons name="trash-outline" size={20} color="#FFFFFF" />
+      <Text style={styles.deleteButtonText}>Delete Restaurant</Text>
+    </TouchableOpacity>
+  </View>
+
         </View>
       </ScrollView>
     </KeyboardAvoidingView>

@@ -16,6 +16,7 @@ import { useAuth } from "@/contexts/AuthContext";
 import { useRouter } from "expo-router";
 import databaseService from "@/services/databaseService";
 import RestaurantService from "@/services/restaurantService";
+import { cancelReservationReminders } from '@/services/notificationService';
 
 const Reservations = () => {
   const router = useRouter();
@@ -39,51 +40,42 @@ const Reservations = () => {
     }
   }, [user, authLoading]);
 
-  // Fetch reservations
-  useEffect(() => {
-    const fetchReservations = async () => {
-      if (!user) return;
+// Fetch reservations
+useEffect(() => {
+  const fetchReservations = async () => {
+    if (!user) return;
 
-      try {
-        setLoading(true);
+    try {
+      setLoading(true);
 
-        // Get all reservations for the current user
-        const queryConstraints = [
-          databaseService.queries.where("userId", "==", user.uid),
-          databaseService.queries.orderBy("date", "desc"),
-        ];
+      // Get all reservations for the current user
+      const queryConstraints = [
+        databaseService.queries.where("userId", "==", user.uid),
+        databaseService.queries.orderBy("date", "desc"),
+      ];
 
-        const result = await databaseService.getDocuments(
-          "reservations",
-          queryConstraints
-        );
+      const result = await databaseService.getDocuments(
+        "reservations",
+        queryConstraints
+      );
+      console.log("The reservations you made :", result)
 
-        if (!result.success) {
-          throw new Error(result.error || "Failed to fetch reservations");
-        }
+      if (!result.success) {
+        throw new Error(result.error || "Failed to fetch reservations");
+      }
 
-        // Process reservations and fetch restaurant details
-        const reservations = await Promise.all(
-          result.data.map(async (reservation) => {
-            try {
-              // Get restaurant details
-              const restaurant = await RestaurantService.getRestaurantById(
-                reservation.restaurantId
-              );
-
-              // Combine reservation and restaurant info
-              return {
-                ...reservation,
-                restaurantName: restaurant?.name || "Restaurant",
-                image:
-                  restaurant?.images?.[0] ||
-                  "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
-                address: restaurant?.address || "Address not available",
-              };
-            } catch (err) {
-              console.error(
-                `Error fetching restaurant details for reservation ${reservation.id}:`,
-                err
+      // Process reservations and fetch restaurant details
+      const reservations = await Promise.all(
+        result.data.map(async (reservation) => {
+          try {
+            // Get restaurant details
+            const restaurantResult = await RestaurantService.getRestaurantById(
+              reservation.restaurantId
+            );
+      
+            if (!restaurantResult || !restaurantResult.data) {
+              console.log(
+                `Restaurant not found for reservation ${reservation.id}`
               );
               return {
                 ...reservation,
@@ -93,101 +85,128 @@ const Reservations = () => {
                 address: "Address not available",
               };
             }
-          })
-        );
+      
+            const restaurant = restaurantResult.data;
+            console.log("Your restaurant object is : ", restaurant);
+            console.log("Your restaurant name is : ", restaurant.name);
+      
+            // Combine reservation and restaurant info
+            return {
+              ...reservation,
+              restaurantName: restaurant.name || "Restaurant",
+              image:
+                restaurant.images?.[0] ||
+                "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+              address: restaurant.address || "Address not available",
+            };
+          } catch (err) {
+            console.log(
+              `Error fetching restaurant details for reservation ${reservation.id}:`,
+              err
+            );
+            return {
+              ...reservation,
+              restaurantName: "Restaurant",
+              image:
+                "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4",
+              address: "Address not available",
+            };
+          }
+        })
+      );
 
-        // Sort and categorize reservations
-        const currentDate = new Date();
+      // Sort and categorize reservations
+      const currentDate = new Date();
 
-        // Group by upcoming/past
-        const upcoming = [];
-        const past = [];
+      // Group by upcoming/past
+      const upcoming = [];
+      const past = [];
 
-        for (const reservation of reservations) {
-          // Convert reservation date to Date
-          let reservationDate;
+      for (const reservation of reservations) {
+        // Convert reservation date to Date
+        let reservationDate;
 
-          // Handle different date formats
-          if (reservation.date) {
-            if (typeof reservation.date === "string") {
-              if (reservation.date.includes("/")) {
-                // MM/DD/YYYY format
-                const [month, day, year] = reservation.date
-                  .split("/")
-                  .map(Number);
-                reservationDate = new Date(year, month - 1, day);
-              } else if (reservation.date.includes("-")) {
-                // YYYY-MM-DD format
-                reservationDate = new Date(reservation.date);
-              } else {
-                // Assume it's a timestamp
-                reservationDate = new Date(reservation.date);
-              }
-            } else if (reservation.date.toDate) {
-              // Firestore timestamp
-              reservationDate = reservation.date.toDate();
+        // Handle different date formats
+        if (reservation.date) {
+          if (typeof reservation.date === "string") {
+            if (reservation.date.includes("/")) {
+              // MM/DD/YYYY format
+              const [month, day, year] = reservation.date
+                .split("/")
+                .map(Number);
+              reservationDate = new Date(year, month - 1, day);
+            } else if (reservation.date.includes("-")) {
+              // YYYY-MM-DD format
+              reservationDate = new Date(reservation.date);
             } else {
-              // Fallback
+              // Assume it's a timestamp
               reservationDate = new Date(reservation.date);
             }
+          } else if (reservation.date.toDate) {
+            // Firestore timestamp
+            reservationDate = reservation.date.toDate();
           } else {
-            // No date found
-            reservationDate = new Date(0);
+            // Fallback
+            reservationDate = new Date(reservation.date);
           }
-
-          // Format date for display
-          const formattedDate = reservationDate.toLocaleDateString("en-US", {
-            year: "numeric",
-            month: "long",
-            day: "numeric",
-          });
-
-          // Create display reservation with formatted date
-          const displayReservation = {
-            ...reservation,
-            formattedDate,
-          };
-
-          // Check if reservation is upcoming or past
-          const reservationDateTime = new Date(reservationDate);
-          if (reservation.time) {
-            const [hours, minutes] = convertTimeToHoursMinutes(
-              reservation.time
-            );
-            reservationDateTime.setHours(hours, minutes);
-          }
-
-          if (
-            reservationDateTime >= currentDate ||
-            reservation.status === "confirmed" ||
-            reservation.status === "pending"
-          ) {
-            upcoming.push(displayReservation);
-          } else {
-            past.push(displayReservation);
-          }
+        } else {
+          // No date found
+          reservationDate = new Date(0);
         }
 
-        // Sort upcoming by date (closest first)
-        upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+        // Format date for display
+        const formattedDate = reservationDate.toLocaleDateString("en-US", {
+          year: "numeric",
+          month: "long",
+          day: "numeric",
+        });
 
-        // Sort past by date (most recent first)
-        past.sort((a, b) => new Date(b.date) - new Date(a.date));
+        // Create display reservation with formatted date
+        const displayReservation = {
+          ...reservation,
+          formattedDate,
+        };
 
-        setUpcomingReservations(upcoming);
-        setPastReservations(past);
-      } catch (err) {
-        console.error("Error fetching reservations:", err);
-        setError(err.message || "Failed to load reservations");
-      } finally {
-        setLoading(false);
+        // Check if reservation is upcoming or past
+        const reservationDateTime = new Date(reservationDate);
+        if (reservation.time) {
+          const [hours, minutes] = convertTimeToHoursMinutes(
+            reservation.time
+          );
+          reservationDateTime.setHours(hours, minutes);
+        }
+
+        // UPDATED CONDITION: Check if future date AND appropriate status
+        if (
+          reservationDateTime > currentDate && 
+          (reservation.status === "confirmed" || reservation.status === "pending")
+        ) {
+          upcoming.push(displayReservation);
+        } else {
+          past.push(displayReservation);
+        }
       }
-    };
 
-    if (user) {
-      fetchReservations();
+      // Sort upcoming by date (closest first)
+      upcoming.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+      // Sort past by date (most recent first)
+      past.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+      setUpcomingReservations(upcoming);
+      setPastReservations(past);
+    } catch (err) {
+      console.log("Error fetching reservations:", err);
+      setError(err.message || "Failed to load reservations");
+    } finally {
+      setLoading(false);
     }
-  }, [user]);
+  };
+
+  if (user) {
+    fetchReservations();
+  }
+}, [user]);
 
   // Convert time string (e.g. "7:30 PM") to hours and minutes
   const convertTimeToHoursMinutes = (timeString) => {
@@ -224,7 +243,7 @@ const Reservations = () => {
           cancelAction();
         }
       } else {
-        // alert without confirmation
+        // Simple alert without confirmation
         window.alert(`${title}\n\n${message}`);
       }
     } else {
@@ -259,6 +278,17 @@ const Reservations = () => {
       "Are you sure you want to cancel this reservation?",
       async () => {
         try {
+          // First, cancel any scheduled reminders for this reservation
+          try {
+                        
+            console.log("Cancelling reminders for reservation:", reservationId);
+            await notificationService.cancelReservationReminders(reservationId);
+          } catch (reminderError) {
+            // Log but don't stop the cancellation if reminder cancellation fails
+            console.log("Error cancelling reminders:", reminderError);
+          }
+          
+          // Update the reservation status in Firestore
           const result = await databaseService.updateDocument(
             "reservations",
             reservationId,
@@ -283,9 +313,29 @@ const Reservations = () => {
               .filter((reservation) => reservation.status !== "cancelled")
           );
           
+          // Show a cancellation notification to the user
+          try {
+            // Find the reservation details from local state
+            const reservation = upcomingReservations.find(res => res.id === reservationId);
+            
+            await notificationService.scheduleLocalNotification(
+              'Reservation Cancelled',
+              `Your reservation${reservation ? ' at ' + reservation.restaurantName : ''} has been cancelled.`,
+              {
+                type: 'reservation_update',
+                reservationId: reservationId,
+                status: 'cancelled'
+              },
+              1 // Show after 1 second
+            );
+          } catch (notificationError) {
+            
+            console.log("Error showing cancellation notification:", notificationError);
+          }
+          
           showPlatformAlert("Success", "Your reservation has been cancelled");
         } catch (err) {
-          console.error("Error cancelling reservation:", err);
+          console.log("Error cancelling reservation:", err);
           showPlatformAlert(
             "Error",
             err.message || "Failed to cancel reservation"

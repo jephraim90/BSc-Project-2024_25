@@ -51,12 +51,18 @@ export default function Index() {
         </View>
         
         <View style={styles.ctaWrapper}>
-        <TouchableOpacity onPress={() => router.push("/restaurants")} >
-          <Text style={styles.callToAction}>
-            Get started
-          </Text>
-
-          </TouchableOpacity>
+        <TouchableOpacity 
+  onPress={() => {
+   
+  
+    const route =  "/restaurants";
+    router.push(route);
+  }} 
+>
+  <Text style={styles.callToAction}>
+    Get started 
+  </Text>
+</TouchableOpacity>
         </View>
       </ScrollView>
       

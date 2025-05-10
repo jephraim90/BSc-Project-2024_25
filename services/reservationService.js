@@ -1,9 +1,6 @@
-// services/reservationService.js
 import databaseService from './databaseService';
 import { Alert } from 'react-native';
-
 const ReservationService = {
-
   async createReservation(reservationData) {
     try {
       // Validation
@@ -36,7 +33,7 @@ const ReservationService = {
       
       return result;
     } catch (error) {
-      console.error('Error creating reservation:', error);
+      console.log('Error creating reservation:', error);
       return {
         id: null,
         success: false,
@@ -74,7 +71,7 @@ const ReservationService = {
       
       return result;
     } catch (error) {
-      console.error('Error fetching user reservations:', error);
+      console.log('Error fetching user reservations:', error);
       return {
         data: [],
         success: false,
@@ -112,7 +109,7 @@ const ReservationService = {
       
       return result;
     } catch (error) {
-      console.error('Error fetching restaurant reservations:', error);
+      console.log('Error fetching restaurant reservations:', error);
       return {
         data: [],
         success: false,
@@ -132,7 +129,7 @@ const ReservationService = {
       
       return result;
     } catch (error) {
-      console.error('Error fetching reservation:', error);
+      console.log('Error fetching reservation:', error);
       return {
         data: null,
         success: false,
@@ -158,7 +155,7 @@ const ReservationService = {
       
       return result;
     } catch (error) {
-      console.error('Error updating reservation:', error);
+      console.log('Error updating reservation:', error);
       return {
         success: false,
         error: error.message
@@ -188,8 +185,7 @@ const ReservationService = {
           message: 'Reservation is already cancelled'
         };
       }
-      
-      // Check cancellation timeframe (can cancel up to 2 hours before)
+          // Check cancellation timeframe (can cancel up to 2 hours before)
       const reservationDateTime = this.combineDateTime(reservation.date, reservation.time);
       const now = new Date();
       const timeDifference = reservationDateTime.getTime() - now.getTime();
@@ -219,7 +215,7 @@ const ReservationService = {
         throw new Error(result.error || 'Failed to cancel reservation');
       }
     } catch (error) {
-      console.error('Error cancelling reservation:', error);
+      console.log('Error cancelling reservation:', error);
       return {
         success: false,
         error: error.message
@@ -261,22 +257,18 @@ const ReservationService = {
       // Get existing reservations for this date
       const reservationsResult = await this.getRestaurantReservations(restaurantId, date);
       const existingReservations = reservationsResult.success ? reservationsResult.data : [];
-      
-      // Generate time slots (simplified - a real app would use the restaurant's business hours)
+     
       const businessHours = restaurant.businessHours[dayOfWeek];
       const timeSlots = this.generateTimeSlots(businessHours.opens, businessHours.closes, 30);
       
       // Check availability for each slot based on existing reservations and restaurant capacity
-      // This is a simplified implementation - a real app would consider table layouts,
-      // reservation duration, restaurant capacity, etc.
+   
       const availableSlots = timeSlots.filter(slot => {
         // Check if there are too many reservations at this time slot
         const reservationsAtThisTime = existingReservations.filter(
           r => r.time === slot && r.status !== 'cancelled'
         );
         
-        // Simplified capacity check - assume each restaurant can handle 10 concurrent reservations
-        // Real implementation would be more complex based on restaurant seating capacity
         const maxSlotCapacity = restaurant.maxCapacity || 10;
         return reservationsAtThisTime.length < maxSlotCapacity;
       });
@@ -290,7 +282,7 @@ const ReservationService = {
         }
       };
     } catch (error) {
-      console.error('Error checking availability:', error);
+      console.log('Error checking availability:', error);
       return {
         success: false,
         error: error.message,

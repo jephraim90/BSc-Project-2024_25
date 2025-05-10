@@ -1,38 +1,34 @@
-import React, { useState, useEffect } from "react";
-import { 
-  View, 
-  Text, 
-  TextInput, 
-  Platform, 
-  Alert, 
-  TouchableOpacity, 
+import React, { useState } from "react";
+import {
+  View,
+  Text,
+  TextInput,
+  Platform,
+  Alert,
+  TouchableOpacity,
   StyleSheet,
   SafeAreaView,
   KeyboardAvoidingView,
   ScrollView,
-  Image
+  ActivityIndicator,
 } from "react-native";
-import {
-  signUp,
-  signIn,
-  subscribeToAuthChanges,
-  signOut,
-  getCurrentUser,
-} from "@/services/authService";
 import { useRouter } from "expo-router";
-import { Ionicons } from '@expo/vector-icons';
-import {useAuth} from '@/contexts/AuthContext';
+import { Ionicons } from "@expo/vector-icons";
+import { useAuth } from "@/contexts/AuthContext";
 
 const AuthenticationScreen = () => {
   const router = useRouter();
   const { login, register } = useAuth();
+  
+  // State management
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
   const [isSigningUp, setIsSigningUp] = useState(false);
-  const [error, setError] = useState(false);
-  const [user, setUser] = useState(null);
-  
+  const [error, setError] = useState(null);
+  const [loading, setLoading] = useState(false);
+
+  // Handle platform-specific alerts
   const showPlatformAlert = (
     title,
     message,
@@ -53,179 +49,153 @@ const AuthenticationScreen = () => {
         window.alert(`${title}\n\n${message}`);
       }
     } else {
-      // For native platforms (iOS/Android)
-      if (confirmAction) {
-        Alert.alert(
-          title,
-          message,
-          [
-            {
-              text: "Cancel",
-              style: "cancel",
-              onPress: cancelAction,
-            },
-            {
-              text: "Delete",
-              style: "destructive",
-              onPress: confirmAction,
-            },
-          ],
-          { cancelable: false }
-        );
-      } else {
-        Alert.alert(title, message);
-      }
+      // For mobile platforms
+      Alert.alert(title, message, [
+        { text: "OK", onPress: confirmAction },
+        { text: "Cancel", style: "cancel", onPress: cancelAction },
+      ]);
     }
   };
 
-  const handleAuth = async () => {
-    setError(false);
-    
-    if (!email.trim() || !password.trim()) {
-      setError("Email and password are required");
-      return;
-    }
-    
-    if (isSigningUp && !confirmPassword.trim()) {
-      setError("Please confirm your password");
-      return;
-    }
-    
-    if (isSigningUp && password !== confirmPassword) {
-      setError("Passwords do not match");
-      return;
-    }
-    
-    let response;
-    
+  // Handle login/signup
+  const handleAuthentication = async () => {
+    setError(null);
+    setLoading(true);
+
     try {
       if (isSigningUp) {
-        response = await register(email, password);
+        // Sign up logic
+        if (password !== confirmPassword) {
+          throw new Error("Passwords do not match.");
+        }
+        await register(email, password);
       } else {
-        response = await login(email, password);
+        // Login logic
+        await login(email, password);
       }
       
-      if (response?.error) {
-        showPlatformAlert("Error", response.error);
-        setError(response.error);
-        return;
-      }
-      
-      // redirect to home
-      router.replace('/');
+      // Success - navigate to home
+      router.replace("/");
     } catch (err) {
-      setError(err.message || "Authentication failed");
+      console.log(isSigningUp ? "Signup failed:" : "Login failed:", err);
+      setError(err.message || `${isSigningUp ? "Signup" : "Login"} failed.`);
+    } finally {
+      setLoading(false);
     }
   };
 
-  useEffect(() => {
-    // Initialize auth listener
-    const unsubscribe = subscribeToAuthChanges((user) => {
-      setUser(user);
-    });
-    
-    // Check for existing logged-in user
-    const currentUser = getCurrentUser();
-    if (currentUser) setUser(currentUser);
-
-    return unsubscribe;
-  }, []);
-
-  useEffect(() => {
-    // Reset error when switching between sign in and sign up
-    setError(false);
-  }, [isSigningUp]);
+  // Toggle between signup and login
+  const toggleAuthMode = () => {
+    setError(null);
+    setIsSigningUp(!isSigningUp);
+  };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={styles.safeArea}>
       <KeyboardAvoidingView
+        style={styles.container}
         behavior={Platform.OS === "ios" ? "padding" : "height"}
-        style={styles.keyboardAvoid}
+        keyboardVerticalOffset={Platform.OS === "ios" ? 100 : 0}
       >
-        <ScrollView contentContainerStyle={styles.scrollContent}>
-          <View style={styles.logoContainer}>
-            <Text style={styles.appTitle}>DineConnect</Text>
-            <Text style={styles.appTagline}>
-              Reserve, Discover, Enjoy
-            </Text>
-          </View>
-
-          <View style={styles.formContainer}>
+        <ScrollView contentContainerStyle={styles.scrollContainer}>
+          <View style={styles.authCard}>
+            {/* Auth Header */}
             <Text style={styles.authTitle}>
               {isSigningUp ? "Create Account" : "Welcome Back"}
             </Text>
-            
             <Text style={styles.authSubtitle}>
-              {isSigningUp 
-                ? "Sign up to start booking tables at your favorite restaurants" 
-                : "Log in to access your reservations and favorites"}
+              {isSigningUp
+                ? "Sign up to continue"
+                : "Sign in to access your account"}
             </Text>
-
-            {error ? (
+            
+            {/* Error Message */}
+            {error && (
               <View style={styles.errorContainer}>
-                <Ionicons name="alert-circle-outline" size={20} color="#d9534f" />
+                <Ionicons name="alert-circle" size={24} color="#d9534f" />
                 <Text style={styles.errorText}>{error}</Text>
               </View>
-            ) : null}
-
+            )}
+            
+            {/* Email Input */}
             <View style={styles.inputContainer}>
-              <Ionicons name="mail-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons 
+                name="mail" 
+                size={24} 
+                color="#888" 
+                style={styles.inputIcon} 
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Email"
-                placeholderTextColor="#999"
+                keyboardType="email-address"
+                autoCapitalize="none"
+                autoCorrect={false}
                 value={email}
                 onChangeText={setEmail}
-                autoCapitalize="none"
-                keyboardType="email-address"
               />
             </View>
-
+            
+            {/* Password Input */}
             <View style={styles.inputContainer}>
-              <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+              <Ionicons 
+                name="lock-closed" 
+                size={24} 
+                color="#888" 
+                style={styles.inputIcon} 
+              />
               <TextInput
                 style={styles.input}
                 placeholder="Password"
-                placeholderTextColor="#999"
-                secureTextEntry
+                secureTextEntry={true}
                 value={password}
                 onChangeText={setPassword}
-                autoCapitalize="none"
               />
             </View>
-
+            
+            {/* Confirm Password (Sign Up only) */}
             {isSigningUp && (
               <View style={styles.inputContainer}>
-                <Ionicons name="lock-closed-outline" size={20} color="#666" style={styles.inputIcon} />
+                <Ionicons 
+                  name="lock-closed" 
+                  size={24} 
+                  color="#888" 
+                  style={styles.inputIcon} 
+                />
                 <TextInput
                   style={styles.input}
                   placeholder="Confirm Password"
-                  placeholderTextColor="#999"
+                  secureTextEntry={true}
                   value={confirmPassword}
                   onChangeText={setConfirmPassword}
-                  secureTextEntry
-                  textContentType="none"
                 />
               </View>
             )}
-
-            <TouchableOpacity style={styles.button} onPress={handleAuth}>
-              <Text style={styles.buttonText}>
-                {isSigningUp ? "Sign Up" : "Log In"}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity 
-              style={styles.switchAuthContainer}
-              onPress={() => setIsSigningUp(!isSigningUp)}
+            
+            {/* Submit Button */}
+            <TouchableOpacity
+              style={styles.button}
+              onPress={handleAuthentication}
+              disabled={loading}
             >
-              <Text style={styles.switchText}>
-                {isSigningUp
-                  ? "Already have an account? "
-                  : "Don't have an account? "}
-                <Text style={styles.switchTextBold}>
-                  {isSigningUp ? "Log In" : "Sign Up"}
+              {loading ? (
+                <ActivityIndicator size="small" color="#fff" />
+              ) : (
+                <Text style={styles.buttonText}>
+                  {isSigningUp ? "Sign Up" : "Log In"}
                 </Text>
+              )}
+            </TouchableOpacity>
+            
+            {/* Toggle Auth Mode */}
+            <TouchableOpacity
+              style={styles.textButton}
+              onPress={toggleAuthMode}
+            >
+              <Text style={styles.textButtonText}>
+                {isSigningUp
+                  ? "Already have an account? Log In"
+                  : "Don't have an account? Sign Up"}
               </Text>
             </TouchableOpacity>
           </View>
@@ -236,33 +206,20 @@ const AuthenticationScreen = () => {
 };
 
 const styles = StyleSheet.create({
+  safeArea: {
+    flex: 1,
+    backgroundColor: "#e8f0ed",
+  },
   container: {
     flex: 1,
     backgroundColor: "#e8f0ed",
   },
-  keyboardAvoid: {
-    flex: 1,
-  },
-  scrollContent: {
+  scrollContainer: {
     flexGrow: 1,
     justifyContent: "center",
     padding: 20,
   },
-  logoContainer: {
-    alignItems: "center",
-    marginBottom: 40,
-  },
-  appTitle: {
-    fontSize: 32,
-    fontWeight: "800",
-    color: "#1a1a1a",
-    marginBottom: 8,
-  },
-  appTagline: {
-    fontSize: 16,
-    color: "#666",
-  },
-  formContainer: {
+  authCard: {
     backgroundColor: "#FFFFFF",
     borderRadius: 16,
     padding: 24,
@@ -330,18 +287,14 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: "600",
   },
-  switchAuthContainer: {
+  textButton: {
     alignItems: "center",
     padding: 8,
   },
-  switchText: {
+  textButtonText: {
     fontSize: 14,
     color: "#666",
     textAlign: "center",
-  },
-  switchTextBold: {
-    fontWeight: "700",
-    color: "#1a1a1a",
   },
 });
 

@@ -1,12 +1,9 @@
 import databaseService from './databaseService';
 import { serverTimestamp } from 'firebase/firestore';
+import { Platform, Alert } from 'react-native';
 
 const RestaurantAPI = {
-  /**
-   * Create a new reservation
-   * @param {Object} reservationData - Reservation details
-   * @returns {Promise<Object>} Result with reservation ID or error
-   */
+ 
   async createReservation(reservationData) {
     try {
       // Validate required fields
@@ -27,7 +24,7 @@ const RestaurantAPI = {
       const result = await databaseService.createDocument('reservations', formattedData);
       return result;
     } catch (error) {
-      console.error('Error creating reservation:', error);
+      console.log('Error creating reservation:', error);
       return {
         success: false,
         error: error.message
@@ -75,7 +72,7 @@ const RestaurantAPI = {
       
       return result;
     } catch (error) {
-      console.error('Error cancelling reservation:', error);
+      console.log('Error cancelling reservation:', error);
       return {
         success: false,
         error: error.message
@@ -112,7 +109,7 @@ const RestaurantAPI = {
       
       return result;
     } catch (error) {
-      console.error('Error modifying reservation:', error);
+      console.log('Error modifying reservation:', error);
       return {
         success: false,
         error: error.message
@@ -160,7 +157,7 @@ const RestaurantAPI = {
         }
       };
     } catch (error) {
-      console.error('Error fetching user reservations:', error);
+      console.log('Error fetching user reservations:', error);
       return {
         success: false,
         error: error.message
@@ -168,92 +165,84 @@ const RestaurantAPI = {
     }
   },
   
-  /**
-   * Check availability for a restaurant
-   * @param {string} restaurantId - Restaurant ID
-   * @param {string} date - Date string (YYYY-MM-DD)
-   * @param {number} partySize - Number of guests
-   * @returns {Promise<Object>} Available time slots
-   */
-  async checkAvailability(restaurantId, date, partySize = 2) {
+
+  async checkAvailability(restaurantId, date, partySize) {
     try {
-      // Get restaurant operating hours
-      const restaurant = await databaseService.getDocumentById('restaurants', restaurantId);
-      
-      if (!restaurant.success) {
-        throw new Error('Restaurant not found');
+      console.log(`Checking availability for restaurant ID: ${restaurantId}, date: ${date}, party size: ${partySize}`);
+  
+      const restaurantResult = await databaseService.getDocumentById('restaurants', restaurantId);
+      console.log("Restaurant lookup result:", restaurantResult);
+  
+      if (!restaurantResult.success || !restaurantResult.data) {
+        console.log(`Restaurant not found for ID: ${restaurantId}`);
+        return { success: false, error: 'Restaurant not found', data: [] };
       }
-      
-      // Get existing reservations for this date/restaurant
-      const existingReservations = await databaseService.getDocuments('reservations', [
+  
+      const restaurant = restaurantResult.data;
+      const { businessHours, capacity = 50 } = restaurant;
+      const dayOfWeek = new Date(date).getDay();
+      const days = ["sunday", "monday", "tuesday", "wednesday", "thursday", "friday", "saturday"]; // Correct order
+      const dayName = days[dayOfWeek]; // Get the day name
+      const dailyHours = businessHours ? businessHours[dayName] : null;
+  
+      console.log("Business hours:", businessHours);
+      console.log("Day of Week:", dayOfWeek, `(${dayName})`); 
+      console.log("Daily Hours:", dailyHours);
+  
+      if (!dailyHours || !dailyHours.open || !dailyHours.close) {
+        return { success: false, error: 'Business hours not available for this day', data: [] };
+      }
+  
+      const openTime = dailyHours.open;
+      const closeTime = dailyHours.close;
+  
+      if (typeof openTime !== 'string' || typeof closeTime !== 'string') {
+        console.log(`Invalid time format in businessHours. Open: ${openTime}, Close: ${closeTime}`);
+        return { success: false, error: 'Invalid time format in business hours', data: [] };
+      }
+  
+      const timeSlots = generateTimeSlots(openTime, closeTime);
+  
+      if (!timeSlots || timeSlots.length === 0) {
+        console.log("No time slots generated or invalid time format");
+        return { success: false, error: "No available time slots", data: [] };
+      }
+  
+      const existingReservationsResult = await databaseService.getDocuments('reservations', [
         databaseService.queries.where('restaurantId', '==', restaurantId),
         databaseService.queries.where('date', '==', date),
         databaseService.queries.where('status', '==', 'confirmed')
       ]);
-      
-      // Generate time slots based on business hours
-      // Extract day of week from date
-      const dateObj = new Date(date);
-      const days = ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'];
-      const dayOfWeek = days[dateObj.getDay()];
-      
-      // Get business hours for the specified day
-      const businessHours = restaurant.data.businessHours?.[dayOfWeek];
-      if (!businessHours || !businessHours.open || !businessHours.close) {
-        return {
-          success: false,
-          error: 'Business hours not available for this day',
-          data: []
-        };
-      }
-      
-      // Generate time slots in 30-minute intervals from opening to closing time
-      const timeSlots = generateTimeSlots(businessHours.open, businessHours.close);
-      
-      // Calculate capacity for each time slot
-      const restaurantCapacity = restaurant.data.capacity || 50;
-      const slotCapacity = {};
-      
-      // Initialize each time slot with full capacity
-      timeSlots.forEach(slot => {
-        slotCapacity[slot] = {
-          available: restaurantCapacity,
-          nextAvailableTime: null
-        };
-      });
-      
-      // Reduce capacity for each existing reservation
-      existingReservations.data.forEach(reservation => {
+  
+      if (!existingReservationsResult.success) throw new Error('Failed to fetch existing reservations');
+      const existingReservations = existingReservationsResult.data;
+  
+      const slotCapacity = timeSlots.reduce((acc, time) => {
+        acc[time] = { available: capacity, nextAvailableTime: null };
+        return acc;
+      }, {});
+  
+      existingReservations.forEach(reservation => {
         const time = reservation.time;
         const guestCount = reservation.guests || 0;
-        
-        if (slotCapacity[time]) {
-          slotCapacity[time].available -= guestCount;
-        }
+        if (slotCapacity[time]) slotCapacity[time].available -= guestCount;
       });
-      
-      // Determine available slots based on party size
-      const availableTimes = [];
+  
+      const availableTimes = timeSlots.filter(time => slotCapacity[time].available >= partySize);
       let nextAvailableTime = null;
-      
-      timeSlots.forEach(time => {
-        if (slotCapacity[time].available >= partySize) {
-          availableTimes.push(time);
-        } else if (!nextAvailableTime) {
-          // Find the next available time slot
-          const remainingSlots = timeSlots.slice(timeSlots.indexOf(time) + 1);
-          nextAvailableTime = remainingSlots.find(slot => slotCapacity[slot].available >= partySize);
-        }
-      });
-      
+      if (availableTimes.length === 0 && timeSlots.length > 0) {
+        const remainingSlots = timeSlots.slice(timeSlots.indexOf(timeSlots[0]) + 1);
+        nextAvailableTime = remainingSlots.find(slot => slotCapacity[slot] && slotCapacity[slot].available >= partySize);
+      }
+  
       return {
         success: true,
         data: availableTimes,
-        nextAvailableTime: nextAvailableTime,
+        nextAvailableTime,
         isRestaurantFull: availableTimes.length === 0
       };
     } catch (error) {
-      console.error('Error checking availability:', error);
+      console.log('Error checking availability:', error);
       return {
         success: false,
         error: error.message,
@@ -262,12 +251,7 @@ const RestaurantAPI = {
     }
   },
 
-  /**
-   * Get restaurant menu items
-   * @param {string} restaurantId - Restaurant ID
-   * @param {string} category - Optional category filter
-   * @returns {Promise<Object>} Menu items
-   */
+  
   async getRestaurantMenu(restaurantId, category = null) {
     try {
       // Get the restaurant document
@@ -313,7 +297,7 @@ const RestaurantAPI = {
         data: groupedMenu
       };
     } catch (error) {
-      console.error('Error fetching restaurant menu:', error);
+      console.log('Error fetching restaurant menu:', error);
       return {
         success: false,
         error: error.message,
@@ -322,15 +306,8 @@ const RestaurantAPI = {
     }
   },
   
-  /**
-   * Get detailed seating availability
-   * @param {string} restaurantId - Restaurant ID
-   * @param {string} date - Date string (YYYY-MM-DD)
-   * @param {string} time - Time slot (e.g., "7:00 PM")
-   * @param {number} partySize - Number of guests
-   * @returns {Promise<Object>} Available tables and seating options
-   */
-  async getSeatingAvailability(restaurantId, date, time, partySize = 2) {
+
+  async getSeatingAvailability(restaurantId, date, time, partySize) {
     try {
       // Get restaurant details
       const restaurant = await databaseService.getDocumentById('restaurants', restaurantId);
@@ -383,7 +360,7 @@ const RestaurantAPI = {
         }
       };
     } catch (error) {
-      console.error('Error fetching seating availability:', error);
+      console.log('Error fetching seating availability:', error);
       return {
         success: false,
         error: error.message,
@@ -395,14 +372,11 @@ const RestaurantAPI = {
     }
   },
   
-  /**
-   * Get real-time restaurant status
-   * @param {string} restaurantId - Restaurant ID
-   * @returns {Promise<Object>} Current restaurant status and wait times
-   */
+  
   async getRestaurantStatus(restaurantId) {
     try {
       const restaurant = await databaseService.getDocumentById('restaurants', restaurantId);
+      console.log("Your restaurant data is ", restaurant.data)
       
       if (!restaurant.success) {
         throw new Error('Restaurant not found');
@@ -412,9 +386,7 @@ const RestaurantAPI = {
       const now = new Date();
       const today = now.toISOString().split('T')[0];
       
-      // Current wait time calculation would typically come from a real-time system
-      // This is a simplified example
-      const estimatedWaitTime = Math.floor(Math.random() * 45) + 15; // 15-60 min
+         const estimatedWaitTime = Math.floor(Math.random() * 45) + 15; // 15-60 min
       
       return {
         success: true,
@@ -424,22 +396,20 @@ const RestaurantAPI = {
           estimatedWaitTime,
           specialNotes: restaurant.data.specialNotes || null
         }
+        
       };
     } catch (error) {
-      console.error('Error fetching restaurant status:', error);
+      console.log('Error fetching restaurant status:', error);
       return {
         success: false,
         error: error.message,
         data: null
       };
     }
+
   },
   
-  /**
-   * Make a reservation with meal preferences and seating
-   * @param {Object} reservationData - Complete reservation details
-   * @returns {Promise<Object>} Result with reservation ID
-   */
+
   async createDetailedReservation(reservationData) {
     try {
       // Validate required fields
@@ -456,6 +426,13 @@ const RestaurantAPI = {
       );
       
       if (!availabilityCheck.success) {
+        showPlatformAlert(
+          "Error",
+          "Failed to check restaurant availability",
+          Platform.OS === "web" 
+            ? [] // Web will use native alert with implicit OK
+            : [{ text: "OK", onPress: () => {} }] // Mobile explicit OK
+        );
         throw new Error('Failed to check restaurant availability');
       }
       
@@ -503,7 +480,7 @@ const RestaurantAPI = {
       
       return result;
     } catch (error) {
-      console.error('Error creating detailed reservation:', error);
+      console.log('Error creating detailed reservation:', error);
       return {
         success: false,
         error: error.message
@@ -511,11 +488,7 @@ const RestaurantAPI = {
     }
   },
   
-  /**
-   * Update the restaurant's current capacity based on active reservations
-   * @param {string} restaurantId - Restaurant ID
-   * @returns {Promise<Object>} Result of the update
-   */
+ 
   async updateRestaurantCapacity(restaurantId) {
     try {
       // Get restaurant data
@@ -558,7 +531,7 @@ const RestaurantAPI = {
         currentCapacity: capacityPercentage
       };
     } catch (error) {
-      console.error('Error updating restaurant capacity:', error);
+      console.log('Error updating restaurant capacity:', error);
       return {
         success: false,
         error: error.message
@@ -566,54 +539,75 @@ const RestaurantAPI = {
     }
   },
 };
+const showPlatformAlert = (title, message, buttons = [], options = {}) => {
+  if (Platform.OS === "web") {
+    if (buttons.length === 0) {
+      // Default to simple alert with OK button
+      window.alert(`${title}\n\n${message}`);
+      return;
+    }
 
-/**
- * Helper function to generate time slots between opening and closing time
- * @param {string} openTime - Opening time (e.g., "9:00 AM")
- * @param {string} closeTime - Closing time (e.g., "10:00 PM")
- * @returns {Array} Array of time slots
- */
-function generateTimeSlots(openTime, closeTime) {
-  const timeSlots = [];
-  const open = parseTimeString(openTime);
-  const close = parseTimeString(closeTime);
-  
-  // Generate slots in 30-minute intervals
-  let current = new Date(open);
-  while (current < close) {
-    timeSlots.push(formatTime(current));
-    current.setMinutes(current.getMinutes() + 30);
+    // Handle confirm dialog with custom buttons
+    const confirmation = window.confirm(
+      `${title}\n\n${message}\n\n` +
+      buttons.map(b => b.text).join(' / ')
+    );
+
+    // Execute corresponding button handler
+    confirmation ? buttons[1]?.onPress?.() : buttons[0]?.onPress?.();
+  } else {
+    // Mobile: Use native alert with default OK button if no buttons provided
+    Alert.alert(
+      title,
+      message,
+      buttons.length > 0 ? buttons : undefined,
+      options
+    );
   }
-  
-  return timeSlots;
-}
+};
 
-/**
- * Parse time string (e.g., "9:00 AM") to Date object
- */
 function parseTimeString(timeStr) {
   const today = new Date();
   const date = new Date(today.toDateString());
-  
+
   const timeParts = timeStr.match(/(\d+):(\d+)\s*(AM|PM)/i);
   if (!timeParts) {
-    return date; // Return current date if parsing fails
+    console.log(`Error parsing time string: ${timeStr}`);
+    return null; // Crucially, return null
   }
-  
+
   let hours = parseInt(timeParts[1]);
   const minutes = parseInt(timeParts[2]);
   const period = timeParts[3].toUpperCase();
-  
+
   if (period === 'PM' && hours < 12) {
     hours += 12;
   } else if (period === 'AM' && hours === 12) {
     hours = 0;
   }
-  
+
   date.setHours(hours, minutes, 0, 0);
   return date;
 }
 
+function generateTimeSlots(openTime, closeTime) {
+  const timeSlots = [];
+  const open = parseTimeString(openTime);
+  const close = parseTimeString(closeTime);
+
+  if (!open || !close) {
+    console.log("Invalid open or close time format.");
+    return []; // Return an empty array
+  }
+
+  let current = new Date(open);
+  while (current < close) {
+    timeSlots.push(formatTime(current));
+    current.setMinutes(current.getMinutes() + 30);
+  }
+
+  return timeSlots;
+}
 /**
  * Format Date object to time string (e.g., "9:00 AM")
  */
@@ -628,12 +622,6 @@ function formatTime(date) {
   return `${hours}:${minutes.toString().padStart(2, '0')} ${period}`;
 }
 
-/**
- * Generate mock tables for a restaurant
- * @param {string} restaurantId - Restaurant ID
- * @param {number} totalTables - Total number of tables to generate
- * @returns {Array} Array of table objects
- */
 function generateMockTables(restaurantId, totalTables) {
   const sections = ['window', 'main', 'bar'];
   const tables = [];

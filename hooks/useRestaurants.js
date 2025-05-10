@@ -38,7 +38,7 @@ const useRestaurants = () => {
           processRestaurantData(result);
         }
       } catch (err) {
-        console.error("Error fetching restaurants:", err);
+        console.log("Error fetching restaurants:", err);
         setError(err.message || 'Failed to load restaurants');
       } finally {
         setLoading(false);

@@ -8,127 +8,151 @@ import {
   StyleSheet,
   FlatList,
   ActivityIndicator,
+  RefreshControl,
+  Platform,
+  Alert
 } from "react-native";
-import React from "react";
+import React, { useState, useEffect } from "react";
 import { Ionicons } from "@expo/vector-icons";
 import { useRouter } from "expo-router";
-import { useAuth } from "@/contexts/AuthContext";
-import { useState, useEffect } from "react";
-
-const FAVORITE_RESTAURANTS = [
-  {
-    id: "1",
-    name: "La Trattoria Italiana",
-    chef: "Marco Rossi",
-    location: "Venice, Italy",
-    rating: 5,
-    description:
-      "Traditional Italian cuisine with a focus on fresh seafood and homemade pasta.",
-    image:
-      "https://images.unsplash.com/photo-1555396273-367ea4eb4db5?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: "Best Seller",
-    badgeColor: "#FFD700",
-  },
-  {
-    id: "2",
-    name: "Le Petit Bistro",
-    chef: "Sophie Dubois",
-    location: "Paris, France",
-    rating: 5,
-    description:
-      "Intimate French bistro serving classic dishes with a modern twist.",
-    image:
-      "https://images.unsplash.com/photo-1414235077428-338989a2e8c0?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: null,
-  },
-  {
-    id: "3",
-    name: "Sakura Sushi",
-    chef: "Hiroshi Tanaka",
-    location: "Tokyo, Japan",
-    rating: 5,
-    description:
-      "Authentic Japanese sushi prepared with the freshest ingredients.",
-    image:
-      "https://images.unsplash.com/photo-1579871494447-9811cf80d66c?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: null,
-  },
-  {
-    id: "4",
-    name: "El Cantina",
-    chef: "Carlos Mendez",
-    location: "Mexico City, Mexico",
-    rating: 4,
-    description:
-      "Vibrant Mexican cantina offering traditional street food and craft tequilas.",
-    image:
-      "https://images.unsplash.com/photo-1513456852971-30c0b8199d4d?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: "Hot This Week",
-    badgeColor: "#FF4136",
-  },
-  {
-    id: "5",
-    name: "The Spice Garden",
-    chef: "Rajesh Patel",
-    location: "Mumbai, India",
-    rating: 5,
-    description:
-      "Authentic Indian cuisine featuring fragrant curries, fresh-baked naan, and house special tandoori dishes.",
-    image:
-      "https://images.unsplash.com/photo-1517248135467-4c7edcad34c4?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: "Most Popular",
-    badgeColor: "#9370DB", // Medium purple
-  },
-  {
-    id: "6",
-    name: "Mediterranean Haven",
-    chef: "Elena Dimitriou",
-    location: "Santorini, Greece",
-    rating: 4,
-    description:
-      "Fresh Mediterranean flavors with emphasis on seafood, olive oils, and locally-sourced ingredients overlooking the Aegean Sea.",
-    image:
-      "https://images.unsplash.com/photo-1515668236457-83c3b8764839?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: "New Addition",
-    badgeColor: "#20B2AA", // Light sea green
-  },
-  {
-    id: "7",
-    name: "Texas Smokehouse",
-    chef: "Bobby Johnson",
-    location: "Austin, Texas",
-    rating: 5,
-    description:
-      "Authentic American BBQ featuring slow-smoked brisket, fall-off-the-bone ribs, and all the classic Southern sides.",
-    image:
-      "https://images.unsplash.com/photo-1555939594-58d7cb561ad1?ixlib=rb-1.2.1&auto=format&fit=crop&w=1000&q=80",
-    badge: null,
-  },
-];
+import { getAuth, onAuthStateChanged } from "firebase/auth";
+import favouritesService from "@/services/favouritesService";
+import RestaurantService from "@/services/restaurantService";
 
 const Favourites = () => {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
-  const [checkedAuth, setCheckedAuth] = React.useState(false);
-  useEffect(() => {
-    if (!authLoading) {
-      if (!user) {
-        router.replace("/auth");
-      }
-      setCheckedAuth(true);
-    }
-  }, [user, authLoading]);
-  if (authLoading || !checkedAuth) {
-    return (
-      <View style={styles.centeredContainer}>
-        <ActivityIndicator size="large" color="#007bff" />
-      </View>
-    );
-  } // this useEffect should run when there is a change in either user or authLoading
+  const [favorites, setFavorites] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
 
-  if (user) {
-    console.log("User Details:", user);
-  }
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
+
+  // Check authentication status
+  useEffect(() => {
+    const auth = getAuth();
+    const unsubscribe = onAuthStateChanged(auth, (user) => {
+      setIsAuthenticated(!!user);
+      if (!user) {
+        setLoading(false);
+      }
+    });
+
+    return () => unsubscribe();
+  }, []);
+
+  // Fetch favorites
+  const fetchFavorites = async () => {
+    if (!isAuthenticated) return;
+    
+    try {
+      setLoading(true);
+      const favoritesResult = await favouritesService.getUserFavorites();
+      
+      if (favoritesResult.success && favoritesResult.data.length > 0) {
+        // Fetch full restaurant details for each favorite
+        const favoriteRestaurants = await Promise.all(
+          favoritesResult.data.map(async (favorite) => {
+            try {
+              const restaurantResult = await RestaurantService.getRestaurantById(favorite.restaurantId);
+              if (restaurantResult && restaurantResult.success && restaurantResult.data) {
+                return {
+                  ...restaurantResult.data,
+                  favoriteId: favorite.id
+                };
+              }
+              return null;
+            } catch (error) {
+              console.log(`Error fetching restaurant ${favorite.restaurantId}:`, error);
+              return null;
+            }
+          })
+        );
+        
+        // Filter out any null results
+        setFavorites(favoriteRestaurants.filter(restaurant => restaurant !== null));
+      } else {
+        setFavorites([]);
+      }
+    } catch (error) {
+      console.log('Error fetching favorites:', error);
+      showPlatformAlert('Error', 'Failed to load favorites');
+    } finally {
+      setLoading(false);
+      setRefreshing(false);
+    }
+  };
+
+  // Fetch favorites when authenticated
+  useEffect(() => {
+    if (isAuthenticated) {
+      fetchFavorites();
+    }
+  }, [isAuthenticated]);
+
+  const onRefresh = () => {
+    setRefreshing(true);
+    fetchFavorites();
+  };
+
+  const handleRemoveFavorite = async (restaurantId) => {
+    try {
+      const result = await favouritesService.removeFavorite(restaurantId);
+      if (result.success) {
+        // Remove from state without refetching
+        setFavorites(currentFavorites => 
+          currentFavorites.filter(restaurant => restaurant.id !== restaurantId)
+        );
+        showPlatformAlert('Success', 'Removed from favorites');
+      } else {
+        console.log('Error removing favorite:', result.error);
+        showPlatformAlert('Error', 'Could not remove from favorites');
+      }
+    } catch (error) {
+      console.log('Error removing favorite:', error);
+      showPlatformAlert('Error', 'Could not remove from favorites');
+    }
+  };
+
+  const handleNavigateToRestaurant = (restaurantId) => {
+    router.push(`/restaurant/${restaurantId}`);
+  };
+
   const renderStars = (rating) => {
     const stars = [];
     for (let i = 0; i < 5; i++) {
@@ -146,7 +170,10 @@ const Favourites = () => {
   };
 
   const renderFavoriteItem = ({ item }) => (
-    <TouchableOpacity style={styles.favoriteItem}>
+    <TouchableOpacity 
+      style={styles.favoriteItem}
+      onPress={() => handleNavigateToRestaurant(item.id)}
+    >
       {item.badge && (
         <View
           style={[
@@ -158,40 +185,94 @@ const Favourites = () => {
         </View>
       )}
 
-      <Image source={{ uri: item.image }} style={styles.restaurantImage} />
+      <Image 
+        source={{ 
+          uri: item.images?.[0] || "https://via.placeholder.com/400x200?text=No+Image" 
+        }} 
+        style={styles.restaurantImage} 
+      />
 
       <View style={styles.restaurantInfo}>
         <Text style={styles.restaurantName}>{item.name}</Text>
-        <Text style={styles.chefName}>{item.chef}</Text>
+        <Text style={styles.chefName}>{item.chef || item.cuisine}</Text>
         <View style={styles.ratingContainer}>{renderStars(item.rating)}</View>
         <Text numberOfLines={2} style={styles.description}>
           {item.description}
         </Text>
       </View>
 
-      <TouchableOpacity style={styles.favoriteButton}>
-        <Ionicons name="heart" size={24} color="#6A0DAD" />
+      <TouchableOpacity 
+        style={styles.favoriteButton}
+        onPress={() => handleRemoveFavorite(item.id)}
+      >
+        <Ionicons name="heart" size={24} color="#FF6B6B" />
       </TouchableOpacity>
     </TouchableOpacity>
   );
+
+  // If not authenticated, prompt to login
+  if (!isAuthenticated && !loading) {
+    return (
+      <SafeAreaView style={styles.safeArea}>
+        <View style={styles.container}>
+          <Text style={styles.mainHeading}>Favorites</Text>
+          <View style={styles.authContainer}>
+            <Text style={styles.authMessage}>Please login to view your favorites</Text>
+            <TouchableOpacity 
+              style={styles.loginButton}
+              onPress={() => router.push('/login')}
+            >
+              <Text style={styles.loginButtonText}>Login</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      </SafeAreaView>
+    );
+  }
 
   return (
     <SafeAreaView style={styles.safeArea}>
       <View style={styles.container}>
         <Text style={styles.mainHeading}>Favorites</Text>
 
-        <FlatList
-          data={FAVORITE_RESTAURANTS}
-          renderItem={renderFavoriteItem}
-          keyExtractor={(item) => item.id}
-          showsVerticalScrollIndicator={false}
-          contentContainerStyle={styles.listContainer}
-        />
+        {loading ? (
+          <View style={styles.centeredContainer}>
+            <ActivityIndicator size="large" color="#007bff" />
+          </View>
+        ) : favorites.length === 0 ? (
+          <View style={styles.emptyContainer}>
+            <Ionicons name="heart-outline" size={64} color="#ccc" />
+            <Text style={styles.emptyText}>You haven't added any favorites yet</Text>
+            <TouchableOpacity 
+              style={styles.browseButton}
+              onPress={() => router.push('/')}
+            >
+              <Text style={styles.browseButtonText}>Browse Restaurants</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          <FlatList
+            data={favorites}
+            renderItem={renderFavoriteItem}
+            keyExtractor={(item) => item.id}
+            showsVerticalScrollIndicator={false}
+            contentContainerStyle={styles.listContainer}
+            refreshControl={
+              <RefreshControl
+                refreshing={refreshing}
+                onRefresh={onRefresh}
+                colors={["#007bff"]}
+                tintColor={"#007bff"}
+              />
+            }
+          />
+        )}
       </View>
     </SafeAreaView>
   );
 };
-export const styles = StyleSheet.create({
+
+const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: "#e8f0ed",
@@ -271,6 +352,58 @@ export const styles = StyleSheet.create({
   favoriteButton: {
     alignSelf: "flex-start",
     padding: 4,
+  },
+  centeredContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+  },
+  emptyContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 100,
+  },
+  emptyText: {
+    fontSize: 16,
+    color: "#666",
+    marginTop: 16,
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  browseButton: {
+    backgroundColor: "#FF6B6B",
+    paddingVertical: 12,
+    paddingHorizontal: 24,
+    borderRadius: 8,
+  },
+  browseButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
+  },
+  authContainer: {
+    flex: 1,
+    justifyContent: "center",
+    alignItems: "center",
+    paddingBottom: 100,
+  },
+  authMessage: {
+    fontSize: 16,
+    color: "#666",
+    marginBottom: 24,
+    textAlign: "center",
+  },
+  loginButton: {
+    backgroundColor: "#007bff",
+    paddingVertical: 12,
+    paddingHorizontal: 40,
+    borderRadius: 8,
+  },
+  loginButtonText: {
+    color: "#fff",
+    fontSize: 16,
+    fontWeight: "600",
   },
 });
 

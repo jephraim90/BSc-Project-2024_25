@@ -11,14 +11,17 @@ import React, { useEffect, useState } from "react";
 import { useRouter } from "expo-router";
 import { useAuth } from "@/contexts/AuthContext";
 import { Ionicons } from "@expo/vector-icons";
-import RestaurantService from "../../services/restaurantService";
+import RestaurantService from "@/services/restaurantService";
 import databaseService from '@/services/databaseService';
 import { where } from "firebase/firestore";
+import RestaurantReservations from "@/components/RestaurantReservations";
 
 const Profile = () => {
   const router = useRouter();
-  const { user, loading: authLoading } = useAuth();
+  const { user, loading: authLoading,logout } = useAuth();
   const [checkedAuth, setCheckedAuth] = React.useState(false);
+
+
 
   useEffect(() => {
     if (!authLoading) {
@@ -37,16 +40,21 @@ const Profile = () => {
     );
   }
 
+  const handleLogout = async () => {
+    console.log("handleLogout function called");
+    await logout();
+    router.replace("/auth");
+  };
   // Function to render content based on user role
   const renderRoleBasedContent = () => {
     switch (user?.role) {
       case "admin":
-        return <AdminContent user={user} />;
+        return <AdminContent user={user} handleLogout={handleLogout} />; // Pass handleLogout
       case "owner":
-        return <OwnerContent user={user} />;
+        return <OwnerContent user={user} handleLogout={handleLogout} />; // Pass handleLogout
       case "user":
       default:
-        return <UserContent user={user} />;
+        return <UserContent user={user} handleLogout={handleLogout} />; // Pass handleLogout
     }
   };
 
@@ -72,7 +80,7 @@ const Profile = () => {
 };
 
 // Admin-specific content component
-const AdminContent = ({ user }) => {
+const AdminContent = ({ user,handleLogout }) => {
   const router = useRouter();
   const [stats, setStats] = useState({
     restaurants: 0,
@@ -100,7 +108,7 @@ const AdminContent = ({ user }) => {
           reservations: reservationsResult.success ? reservationsResult.data.length : 0
         });
       } catch (error) {
-        console.error('Error fetching admin stats:', error);
+        console.log('Error fetching admin stats:', error);
       } finally {
         setLoading(false);
       }
@@ -177,18 +185,23 @@ const AdminContent = ({ user }) => {
         <Text style={styles.menuItemText}>Analytics Dashboard</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+  <Ionicons name="log-out-outline" size={24} color="#ffffff" />
+  <Text style={styles.logoutText}>Logout</Text>
+</TouchableOpacity>
     </View>
   );
 };
 
 // Restaurant Owner content component
-const OwnerContent = ({ user }) => {
+const OwnerContent = ({ user,handleLogout }) => {
   const router = useRouter();
   const [restaurants, setRestaurants] = useState([]);
   const [stats, setStats] = useState({
     count: 0,
     reservations: 0,
     avgRating: 0,
+    totalReviews: 0 
   });
   const [loading, setLoading] = useState(true);
 
@@ -204,13 +217,28 @@ const OwnerContent = ({ user }) => {
         if (result && result.length > 0) {
           setRestaurants(result);
 
-          // Calculate stats
-          const totalRating = result.reduce(
+          // Filter out restaurants that haven't been rated
+          const ratedRestaurants = result.filter(restaurant => 
+            restaurant.rating !== undefined && 
+            restaurant.rating !== null && 
+            restaurant.rating > 0
+          );
+          
+          // Calculate average rating only for restaurants that have ratings
+          const totalRating = ratedRestaurants.reduce(
             (sum, restaurant) => sum + restaurant.rating,
             0
           );
-          const avgRating =
-            result.length > 0 ? (totalRating / result.length).toFixed(1) : 0;
+          
+          const avgRating = ratedRestaurants.length > 0 
+            ? (totalRating / ratedRestaurants.length).toFixed(1) 
+            : 0;
+
+          // Calculate total reviews count
+          const totalReviews = result.reduce(
+            (sum, restaurant) => sum + (restaurant.reviews || 0),
+            0
+          );
 
           // Get today's reservations count
           const todaysReservations =
@@ -220,10 +248,11 @@ const OwnerContent = ({ user }) => {
             count: result.length,
             reservations: todaysReservations,
             avgRating: avgRating,
+            totalReviews: totalReviews
           });
         }
       } catch (error) {
-        console.error("Error fetching owner restaurants:", error);
+        console.log("Error fetching owner restaurants:", error);
       } finally {
         setLoading(false);
       }
@@ -260,7 +289,28 @@ const OwnerContent = ({ user }) => {
           <Text style={styles.statNumber}>{stats.avgRating}</Text>
           <Text style={styles.statLabel}>Avg. Rating</Text>
         </View>
+        <View style={styles.statItem}>
+          <Text style={styles.statNumber}>{stats.totalReviews}</Text>
+          <Text style={styles.statLabel}>Total Reviews</Text>
+        </View>
       </View>
+      
+
+      
+      <TouchableOpacity
+        style={styles.menuItem}
+        onPress={() => router.push("/reviews")}
+      >
+        <Ionicons name="star-outline" size={24} color="#1a1a1a" />
+        <Text style={styles.menuItemText}>Restaurant Reviews</Text>
+        <View style={styles.menuItemBadge}>
+          <Text style={styles.menuItemBadgeText}>{stats.totalReviews}</Text>
+        </View>
+        <Ionicons name="chevron-forward" size={20} color="#666" />
+      </TouchableOpacity>
+      
+      <Text style={styles.sectionTitle}>Reservations</Text>
+      <RestaurantReservations ownerId={user.uid} />
 
       <Text style={styles.sectionTitle}>Restaurants</Text>
 
@@ -291,7 +341,7 @@ const OwnerContent = ({ user }) => {
                   <View style={styles.restaurantItemStatItem}>
                     <Ionicons name="star" size={14} color="#FFD700" />
                     <Text style={styles.restaurantItemStatText}>
-                      {restaurant.rating.toFixed(1)}
+                      {restaurant.rating ? restaurant.rating.toFixed(1) : "No ratings"}
                     </Text>
                   </View>
                   <View style={styles.restaurantItemStatItem}>
@@ -331,11 +381,16 @@ const OwnerContent = ({ user }) => {
         <Ionicons name="add" size={24} color="#fff" />
         <Text style={styles.addButtonText}>Add New Restaurant</Text>
       </TouchableOpacity>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+  <Ionicons name="log-out-outline" size={24} color="#ffffff" />
+  <Text style={styles.logoutText}>Logout</Text>
+</TouchableOpacity>
     </View>
   );
 };
+
 // Regular User content component
-const UserContent = ({ user }) => {
+const UserContent = ({ user,handleLogout }) => {
   const router = useRouter();
   const [stats, setStats] = useState({
     reservations: 0,
@@ -372,7 +427,7 @@ const UserContent = ({ user }) => {
           reviews: reviewsResult.success ? reviewsResult.data.length : 0
         });
       } catch (error) {
-        console.error('Error fetching user stats:', error);
+        console.log('Error fetching user stats:', error);
       } finally {
         setLoading(false);
       }
@@ -400,7 +455,7 @@ const UserContent = ({ user }) => {
           ) : (
             <Text style={styles.statNumber}>{stats.favorites}</Text>
           )}
-          <Text style={styles.statLabel}>Favorites</Text>
+          <Text style={styles.statLabel}>Favourites</Text>
         </View>
         <View style={styles.statItem}>
           {loading ? (
@@ -420,6 +475,9 @@ const UserContent = ({ user }) => {
       >
         <Ionicons name="calendar-outline" size={24} color="#1a1a1a" />
         <Text style={styles.menuItemText}>My Reservations</Text>
+        <View style={styles.menuItemBadge}>
+          <Text style={styles.menuItemBadgeText}>{stats.reservations}</Text>
+        </View>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
       
@@ -438,6 +496,9 @@ const UserContent = ({ user }) => {
       >
         <Ionicons name="heart-outline" size={24} color="#1a1a1a" />
         <Text style={styles.menuItemText}>Favorite Restaurants</Text>
+        <View style={styles.menuItemBadge}>
+          <Text style={styles.menuItemBadgeText}>{stats.favorites}</Text>
+        </View>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
       
@@ -447,6 +508,9 @@ const UserContent = ({ user }) => {
       >
         <Ionicons name="star-outline" size={24} color="#1a1a1a" />
         <Text style={styles.menuItemText}>My Reviews</Text>
+        <View style={styles.menuItemBadge}>
+          <Text style={styles.menuItemBadgeText}>{stats.reviews}</Text>
+        </View>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
       
@@ -467,169 +531,238 @@ const UserContent = ({ user }) => {
         <Text style={styles.menuItemText}>Help & Support</Text>
         <Ionicons name="chevron-forward" size={20} color="#666" />
       </TouchableOpacity>
+      <TouchableOpacity style={styles.logoutButton} onPress={handleLogout}>
+  <Ionicons name="log-out-outline" size={24} color="#ffffff" />
+  <Text style={styles.logoutText}>Logout</Text>
+</TouchableOpacity>
     </View>
   );
 };
 
 const styles = StyleSheet.create({
-  centeredContainer: {
-    flex: 1,
-    alignItems: "center",
-    justifyContent: "center",
-  },
   container: {
     flex: 1,
     backgroundColor: "#e8f0ed",
   },
-  profileHeader: {
-    alignItems: "center",
-    padding: 24,
-    backgroundColor: "#FFFFFF",
-    borderBottomWidth: 1,
-    borderBottomColor: "#eeeeee",
-  },
-  profileImageContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: "#1a1a1a",
+  centeredContainer: {
+    flex: 1,
     justifyContent: "center",
     alignItems: "center",
-    marginBottom: 12,
+  },
+  profileHeader: {
+    alignItems: "center",
+    paddingVertical: 20,
+  },
+  profileImageContainer: {
+    backgroundColor: "#ccc",
+    borderRadius: 50,
+    width: 100,
+    height: 100,
+    justifyContent: "center",
+    alignItems: "center",
   },
   profileImagePlaceholder: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: "bold",
-    color: "#FFFFFF",
+    color: "#fff",
   },
   welcomeText: {
-    fontSize: 18,
-    fontWeight: "600",
+    fontSize: 24,
+    fontWeight: "bold",
+    marginTop: 10,
     color: "#1a1a1a",
-    marginBottom: 8,
   },
   roleBadge: {
-    paddingHorizontal: 12,
-    paddingVertical: 4,
-    backgroundColor: "#e8f0ed",
-    borderRadius: 16,
+    backgroundColor: "#d4edda",
+    paddingVertical: 5,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    marginTop: 8,
   },
   roleText: {
     fontSize: 12,
-    fontWeight: "600",
-    color: "#1a1a1a",
+    fontWeight: "bold",
+    color: "#155724",
   },
   roleContainer: {
-    padding: 16,
+    paddingHorizontal: 20,
+    paddingBottom: 20,
   },
   sectionTitle: {
-    fontSize: 18,
-    fontWeight: "700",
+    fontSize: 20,
+    fontWeight: "bold",
+    marginTop: 20,
+    marginBottom: 10,
     color: "#1a1a1a",
-    marginTop: 16,
-    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#ccc",
+    paddingBottom: 5,
   },
   statsContainer: {
     flexDirection: "row",
-    justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 16,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    justifyContent: "space-around",
+    marginBottom: 20,
   },
   statItem: {
     alignItems: "center",
-    flex: 1,
   },
   statNumber: {
-    fontSize: 24,
-    fontWeight: "700",
+    fontSize: 18,
+    fontWeight: "bold",
     color: "#1a1a1a",
-    marginBottom: 4,
   },
   statLabel: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#666",
   },
   menuItem: {
     flexDirection: "row",
     alignItems: "center",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    paddingVertical: 15,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f0f0f0",
   },
   menuItemText: {
-    flex: 1,
     fontSize: 16,
     color: "#1a1a1a",
-    marginLeft: 12,
+    marginLeft: 15,
+    flex: 1,
+  },
+  menuItemBadge: {
+    backgroundColor: "#ffc107",
+    borderRadius: 10,
+    paddingVertical: 3,
+    paddingHorizontal: 8,
+    marginRight: 8,
+  },
+  menuItemBadgeText: {
+    fontSize: 12,
+    color: "#fff",
+    fontWeight: "bold",
   },
   restaurantItem: {
-    flexDirection: "row",
-    alignItems: "center",
-    justifyContent: "space-between",
-    backgroundColor: "#FFFFFF",
-    borderRadius: 12,
-    padding: 16,
-    marginBottom: 10,
-    shadowColor: "#000",
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 2,
-    elevation: 2,
+    backgroundColor: "#fff",
+    borderRadius: 8,
+    marginBottom: 15,
+    overflow: "hidden",
   },
   restaurantItemContent: {
     flexDirection: "row",
     alignItems: "center",
-    flex: 1,
+    padding: 10,
+  },
+  restaurantItemImage: {
+    width: 80,
+    height: 80,
+    borderRadius: 8,
+    marginRight: 10,
   },
   restaurantItemImagePlaceholder: {
-    width: 48,
-    height: 48,
+    width: 80,
+    height: 80,
+    backgroundColor: "#ccc",
     borderRadius: 8,
-    backgroundColor: "#1a1a1a",
+    marginRight: 10,
     justifyContent: "center",
     alignItems: "center",
   },
   restaurantItemInfo: {
-    marginLeft: 12,
     flex: 1,
   },
   restaurantItemName: {
     fontSize: 16,
-    fontWeight: "600",
+    fontWeight: "bold",
     color: "#1a1a1a",
-    marginBottom: 4,
   },
   restaurantItemAddress: {
-    fontSize: 12,
+    fontSize: 14,
     color: "#666",
+    marginBottom: 4,
   },
-  addButton: {
+  restaurantItemStats: {
     flexDirection: "row",
     alignItems: "center",
-    justifyContent: "center",
+  },
+  restaurantItemStatItem: {
+    flexDirection: "row",
+    alignItems: "center",
+    marginRight: 16,
+    marginBottom: 6,
+  },
+  restaurantItemStatText: {
+    fontSize: 12,
+    color: "#1a1a1a",
+    marginLeft: 4,
+    fontWeight: "500",
+  },
+  restaurantItemActions: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "flex-end",
+    paddingHorizontal: 10,
+    paddingVertical: 8,
+    backgroundColor: "#f5f5f5",
+  },
+  editButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+    borderRadius: 4,
+    backgroundColor: "#e0f7fa",
+    marginRight: 8,
+  },
+  editButtonText: {
+    fontSize: 14,
+    color: "#1a1a1a",
+    marginLeft: 4,
+  },
+  addButton: {
     backgroundColor: "#1a1a1a",
-    borderRadius: 12,
-    padding: 16,
-    marginTop: 16,
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: "center",
+    marginTop: 20,
+    flexDirection: "row",
+    justifyContent: "center",
   },
   addButtonText: {
+    color: "#fff",
     fontSize: 16,
-    fontWeight: "600",
-    color: "#FFFFFF",
-    marginLeft: 8,
+    fontWeight: "bold",
+    marginLeft: 10,
+  },
+  emptyStateContainer: {
+    alignItems: "center",
+    padding: 40,
+  },
+  emptyStateText: {
+    fontSize: 16,
+    color: "#888",
+    marginTop: 10,
+    textAlign: "center",
+  },
+  logoutButton: {
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "center", 
+    backgroundColor: "#ff3b30", 
+    borderRadius: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    marginTop: 30, 
+    marginHorizontal: 20, 
+    elevation: 2, 
+    shadowColor: "#000", 
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  logoutText: {
+    fontSize: 16,
+    fontWeight: "600", // Make text semi-bold
+    color: "#ffffff", // White text for contrast
+    marginLeft: 10,
   },
 });
 

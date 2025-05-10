@@ -37,8 +37,7 @@ const RestaurantCard = ({ restaurant, variant = 'default', style }) => {
 
   // Check if restaurant is open now
   const isOpenNow = () => {
-    // This is a simplified version - you'd want to use the RestaurantHoursService
-    // for a more accurate check that handles timezones, special hours, etc.
+  
     if (!restaurant.businessHours) return false;
     
     const now = new Date();

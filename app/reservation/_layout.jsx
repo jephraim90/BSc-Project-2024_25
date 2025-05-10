@@ -20,6 +20,12 @@ const ReservationLayout = () => {
             headerShown: false,
           }}
         />
+        <Stack.Screen
+          name="confirmation"
+          options={{
+            headerShown: false,
+          }}
+        />
         </Stack>
      </AuthProvider>
   )

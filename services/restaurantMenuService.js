@@ -47,7 +47,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error adding menu section:", error);
+      console.log("Error adding menu section:", error);
       return {
         success: false,
         sectionIndex: -1,
@@ -101,7 +101,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error updating menu section:", error);
+      console.log("Error updating menu section:", error);
       return {
         success: false,
         error: error.message,
@@ -153,7 +153,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error deleting menu section:", error);
+      console.log("Error deleting menu section:", error);
       return {
         success: false,
         error: error.message,
@@ -206,7 +206,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error adding menu item:", error);
+      console.log("Error adding menu item:", error);
       return {
         success: false,
         itemIndex: -1,
@@ -259,7 +259,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error updating menu item:", error);
+      console.log("Error updating menu item:", error);
       return {
         success: false,
         error: error.message,
@@ -310,7 +310,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error deleting menu item:", error);
+      console.log("Error deleting menu item:", error);
       return {
         success: false,
         error: error.message,
@@ -362,7 +362,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error reordering menu sections:", error);
+      console.log("Error reordering menu sections:", error);
       return {
         success: false,
         error: error.message,
@@ -428,7 +428,7 @@ const RestaurantMenuService = {
         error: null,
       };
     } catch (error) {
-      console.error("Error reordering menu items:", error);
+      console.log("Error reordering menu items:", error);
       return {
         success: false,
         error: error.message,

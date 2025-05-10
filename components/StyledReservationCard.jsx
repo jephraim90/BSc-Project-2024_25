@@ -1,6 +1,3 @@
-// This is the component that will be used inside the QR modal
-// to create a beautifully styled reservation card with QR code
-
 import React from 'react';
 import { View, Text, StyleSheet, Image } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
@@ -11,24 +8,22 @@ const StyledReservationCard = ({
   reservation, 
   reservationId,
 }) => {
-  // Create a compact version of the reservation data to encode in the QR code
-  const compactReservationData = {
-    id: reservationId,
-    r: restaurant.name,
-    d: reservation.date,
-    t: reservation.time,
-    g: reservation.guests,
-    s: reservation.status
-  };
-  
-  // Convert to string for QR code (more efficient than full JSON)
-  const qrCodeData = JSON.stringify(compactReservationData);
+ 
+  const qrCodeData = 
+    `RESERVATION: ${restaurant.name}\n` +
+    `ID: ${reservationId.substring(0, 8).toUpperCase()}\n` +
+    `DATE: ${formatDate(reservation.date)}\n` +
+    `TIME: ${reservation.time}\n` +
+    `GUESTS: ${reservation.guests}\n` +
+    `LOCATION: ${restaurant.address}\n` +
+    `STATUS: ${reservation.status.toUpperCase()}\n\n` +
+    `This invite is authenticated.`;
   
   // Format date
-  const formatDate = (dateString) => {
+  function formatDate(dateString) {
     const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric' };
     return new Date(dateString).toLocaleDateString(undefined, options);
-  };
+  }
   
   // Get status color
   const getStatusColor = () => {
@@ -107,6 +102,14 @@ const StyledReservationCard = ({
             <Text style={styles.detailValue}>{reservation.guests}</Text>
           </View>
         </View>
+        
+        {/* Location */}
+        <View style={styles.locationContainer}>
+          <Ionicons name="location-outline" size={18} color="#666" />
+          <Text style={styles.locationText} numberOfLines={2}>
+            {restaurant.address}
+          </Text>
+        </View>
       </View>
       
       {/* QR Code Section */}
@@ -134,8 +137,8 @@ const StyledReservationCard = ({
         <Text style={styles.footerText}>
           Scan this code to verify reservation
         </Text>
-        <Text style={styles.addressText}>
-          {restaurant.address}
+        <Text style={styles.authenticatedText}>
+          This invite is authenticated
         </Text>
       </View>
     </View>
@@ -201,6 +204,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
+    marginBottom: 12,
   },
   detailItem: {
     flex: 1,
@@ -223,6 +227,19 @@ const styles = StyleSheet.create({
     color: '#1a1a1a',
     marginTop: 2,
     textAlign: 'center',
+  },
+  locationContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#eee',
+  },
+  locationText: {
+    fontSize: 12,
+    color: '#666',
+    marginLeft: 8,
+    flex: 1,
   },
   qrContainer: {
     alignItems: 'center',
@@ -253,12 +270,12 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: '#666',
   },
-  addressText: {
-    fontSize: 10,
-    color: '#888',
-    textAlign: 'center',
+  authenticatedText: {
+    fontSize: 12,
+    color: '#4CAF50',
+    fontWeight: '600',
     marginTop: 4,
-  }
+  },
 });
 
 export default StyledReservationCard;

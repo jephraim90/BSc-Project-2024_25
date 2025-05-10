@@ -41,49 +41,98 @@ import {
     const [selectedMenuItems, setSelectedMenuItems] = useState([]);
     const [selectedTableIds, setSelectedTableIds] = useState([]);
     
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
+
     useEffect(() => {
       const fetchReservationDetails = async () => {
         try {
           setLoading(true);
-          
+    
           // Fetch reservation data
-          const reservationResult = await databaseService.getDocumentById('reservations', id);
-          
+          const reservationResult = await databaseService.getDocumentById(
+            "reservations",
+            id
+          );
+          console.log("Your reservation Details", reservationResult);
+    
           if (!reservationResult.success || !reservationResult.data) {
-            throw new Error('Reservation not found');
+            throw new Error("Reservation not found");
           }
-          
+    
           const reservationData = reservationResult.data;
+          console.log("Your reservation Data", reservationData);
           setReservation(reservationData);
-          
-          // Initialize form state with reservation data
-          setDate(reservationData.date);
-          setTime(reservationData.time);
-          setGuests(reservationData.guests.toString());
-          setSpecialRequests(reservationData.specialRequests || '');
-          setSelectedMenuItems(reservationData.menuSelections || []);
-          setSelectedTableIds(reservationData.tableIds || []);
-          
+    
           // Fetch associated restaurant data
-          const restaurantData = await RestaurantService.getRestaurantById(reservationData.restaurantId);
+          const restaurantResult = await RestaurantService.getRestaurantById(
+            reservationData.restaurantId
+          );
+    
+          if (!restaurantResult || !restaurantResult.data) {
+            console.log("Restaurant data not found");
+            setError("Restaurant data not available");
+            setLoading(false);
+            return; // Exit if restaurant data fails
+          }
+    
+          const restaurantData = restaurantResult.data;
+          console.log("Restaurant data for booking : ", restaurantData);
           setRestaurant(restaurantData);
-          
-          // Fetch available times for the selected date
-          await checkAvailability(restaurantData, reservationData.date, reservationData.guests);
-          
+    
+          // Initialize form state with reservation data
+          setDate(reservationData.date || "");
+          setTime(reservationData.time || "");
+          setGuests(String(reservationData.guests) || "2"); // Ensure guests is a string
+          setSpecialRequests(reservationData.specialRequests || "");
+          setSelectedMenuItems(reservationData.selectedMenuItems || []);
+    
+          setLoading(false);
         } catch (err) {
-          console.error('Error fetching reservation details:', err);
-          setError(err.message || 'Failed to load reservation details');
-        } finally {
+          console.log("Error fetching reservation details:", err);
+          setError(err.message || "Failed to load reservation details");
           setLoading(false);
         }
       };
-      
+    
       if (id) {
         fetchReservationDetails();
       }
     }, [id]);
-    
     // Check availability when date or party size changes
     const checkAvailability = useCallback(
       debounce(async (restaurantData, selectedDate, partySize) => {
@@ -105,10 +154,10 @@ import {
               setAvailableTimes(result.data);
             }
           } else {
-            console.error('Error checking availability:', result.error);
+            console.log('Error checking availability:', result.error);
           }
         } catch (err) {
-          console.error('Error in availability check:', err);
+          console.log('Error in availability check:', err);
         }
       }, 500),
       [time]
@@ -196,7 +245,7 @@ import {
     const handleSubmit = async () => {
       try {
         if (!date || !time || !guests) {
-          Alert.alert('Error', 'Please fill in all required fields');
+          showPlatformAlert('Error', 'Please fill in all required fields', null);
           return;
         }
         
@@ -210,7 +259,7 @@ import {
           specialRequests: specialRequests.trim() || null,
           menuSelections: selectedMenuItems.length > 0 ? selectedMenuItems : null,
           tableIds: selectedTableIds.length > 0 ? selectedTableIds : null,
-          status: 'confirmed', // Keep status as confirmed after update
+          status: 'confirmed',
           updatedAt: new Date().toISOString()
         };
         
@@ -218,22 +267,18 @@ import {
         const result = await RestaurantAPI.modifyReservation(id, updatedData);
         
         if (result.success) {
-          Alert.alert(
+          showPlatformAlert(
             'Success',
             'Reservation updated successfully!',
-            [
-              {
-                text: 'View Reservation',
-                onPress: () => router.push(`/reservation/${id}`)
-              }
-            ]
+            () => router.push(`/reservation/${id}`),  // Confirm action
+            () => router.back()  // Cancel action
           );
         } else {
           throw new Error(result.error || 'Failed to update reservation');
         }
       } catch (err) {
-        console.error('Error updating reservation:', err);
-        Alert.alert('Error', err.message || 'Failed to update reservation');
+        console.log('Error updating reservation:', err);
+        showPlatformAlert('Error', err.message || 'Failed to update reservation', null);
       } finally {
         setSubmitting(false);
       }

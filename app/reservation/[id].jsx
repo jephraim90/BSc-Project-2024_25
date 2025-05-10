@@ -25,6 +25,7 @@ import ViewShot from "react-native-view-shot";
 import StyledReservationCard from "@/components/StyledReservationCard";
 import ShareReservationModal from '@/components/ShareReservationModal';
 import ReservationGuestsList from '@/components/ReservationGuestsList';
+import reservationSharingService from '@/services/reservationSharingService';
 
 const ReservationDetails = () => {
   const { id } = useLocalSearchParams();
@@ -40,62 +41,180 @@ const ReservationDetails = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [qrSharingInProgress, setQrSharingInProgress] = useState(false);
   const [showShareModal, setShowShareModal] = useState(false);
+  const [isInvitedGuest, setIsInvitedGuest] = useState(false);
+  const [permissionCheckComplete, setPermissionCheckComplete] = useState(false);
+  const showPlatformAlert = (
+    title,
+    message,
+    confirmAction,
+    cancelAction = () => {}
+  ) => {
+    if (Platform.OS === "web") {
+      if (confirmAction) {
+        const isConfirmed = window.confirm(`${title}\n\n${message}`);
+        isConfirmed ? confirmAction() : cancelAction();
+      } else {
+        window.alert(`${title}\n\n${message}`);
+      }
+    } else {
+      if (confirmAction) {
+        Alert.alert(
+          title,
+          message,
+          [
+            {
+              text: "Cancel",
+              style: "cancel",
+              onPress: cancelAction,
+            },
+            {
+              text: "OK",
+              onPress: confirmAction,
+            },
+          ],
+          { cancelable: false }
+        );
+      } else {
+        Alert.alert(title, message);
+      }
+    }
+  };
+
   const handleShareWithUsers = () => {
     setShowShareModal(true);
   };
 
   useEffect(() => {
-    const fetchReservationDetails = async () => {
-      try {
-        setLoading(true);
+  const fetchReservationDetails = async () => {
+    try {
+      setLoading(true);
 
-        // Fetch reservation data
-        const reservationResult = await databaseService.getDocumentById(
-          "reservations",
-          id
-        );
+      // Fetch reservation data
+      const reservationResult = await databaseService.getDocumentById(
+        "reservations",
+        id
+      );
+      console.log("Your reservation Details", reservationResult);
 
-        if (!reservationResult.success || !reservationResult.data) {
-          throw new Error("Reservation not found");
-        }
-
-        const reservationData = reservationResult.data;
-        setReservation(reservationData);
-
-        // Fetch associated restaurant data
-        const restaurantData = await RestaurantService.getRestaurantById(
-          reservationData.restaurantId
-        );
-        setRestaurant(restaurantData);
-      } catch (err) {
-        console.error("Error fetching reservation details:", err);
-        setError(err.message || "Failed to load reservation details");
-      } finally {
-        setLoading(false);
+      if (!reservationResult.success || !reservationResult.data) {
+        throw new Error("Reservation not found");
       }
-    };
 
-    if (id) {
-      fetchReservationDetails();
+      const reservationData = reservationResult.data;
+      console.log("Your reservation Data", reservationData);
+      setReservation(reservationData);
+
+      // Fetch associated restaurant data
+      const restaurantResult = await RestaurantService.getRestaurantById(
+        reservationData.restaurantId
+      );
+
+      if (!restaurantResult || !restaurantResult.data) {
+        console.log("Restaurant data not found");
+        // Handle the error appropriately - don't proceed to setRestaurant
+        setError("Restaurant data not available");
+        setLoading(false);
+        return; 
+      }
+
+      const restaurantData = restaurantResult.data;
+      console.log("Restaurant data for booking : ", restaurantData);
+      setRestaurant(restaurantData);
+
+      // Default invited status to false
+      let invitedStatus = false;
+
+      // Check if the current user is an invited guest
+      if (user && user.uid !== reservationData.userId) {
+        try {
+          console.log("Checking for shared reservation:", id, user.uid);
+
+          const sharedReservationResult =
+            await reservationSharingService.checkIfSharedWithUser(id, user.uid);
+
+          console.log(
+            "Shared reservation check result:",
+            sharedReservationResult
+          );
+
+          if (
+            sharedReservationResult.success &&
+            sharedReservationResult.isShared
+          ) {
+            invitedStatus = true;
+          }
+        } catch (err) {
+          console.log("Error checking invitation:", err);
+        }
+      }
+
+      // Set both states after all async operations are complete
+      setIsInvitedGuest(invitedStatus);
+      setPermissionCheckComplete(true);
+      setLoading(false);
+    } catch (err) {
+      console.log("Error fetching reservation details:", err);
+      setError(err.message || "Failed to load reservation details");
+      setPermissionCheckComplete(true);
+      setLoading(false);
     }
-  }, [id]);
+  };
+
+  if (id) {
+    fetchReservationDetails();
+  }
+}, [id, user]);
+
 
   // Check if the user has permission to view this reservation
   const hasPermission = () => {
-    if (!user || !reservation) return false;
-
+    console.log("User:", user);
+    console.log("Reservation:", reservation);
+    console.log("Is invited guest:", isInvitedGuest);
+  
+    if (!user || !reservation) {
+      console.log("No user or reservation");
+      return false;
+    }
+  
     // User owns this reservation
-    if (user.uid === reservation.userId) return true;
-
+    if (user.uid === reservation.userId) {
+      console.log("User owns reservation");
+      return true;
+    }
+  
     // User owns the restaurant
-    if (restaurant && user.uid === restaurant.ownerId) return true;
-
+    if (restaurant && user.uid === restaurant.ownerId) {
+      console.log("User owns restaurant");
+      return true;
+    }
+  
     // User is an admin
-    if (user.role === "admin") return true;
-
+    if (user.role === "admin") {
+      console.log("User is admin");
+      return true;
+    }
+  
+    // An Invited Guest
+    if (isInvitedGuest) {
+      console.log("User is invited guest");
+      return true;
+    }
+  
+    console.log("No permission match");
     return false;
   };
-
+// Only render the content when both loading and permission check are complete
+if (loading || !permissionCheckComplete) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.loadingContainer}>
+        <ActivityIndicator size="large" color="#1a1a1a" />
+        <Text style={styles.loadingText}>Loading reservation details...</Text>
+      </View>
+    </SafeAreaView>
+  );
+}
   // Format date
   const formatDate = (dateString) => {
     const options = {
@@ -120,22 +239,7 @@ const ReservationDetails = () => {
     return new Date(timestamp).toLocaleString();
   };
 
-  // Generate QR code data
-  const generateQRData = () => {
-    if (!reservation || !restaurant) return "";
-
-    const reservationData = {
-      id: id,
-      restaurant: restaurant.name,
-      date: reservation.date,
-      time: reservation.time,
-      guests: reservation.guests,
-      status: reservation.status,
-      name: reservation.userName || user?.displayName || "Guest",
-    };
-
-    return JSON.stringify(reservationData);
-  };
+  
 
   // Handle sharing QR code
   const handleShareQRCode = async () => {
@@ -145,44 +249,126 @@ const ReservationDetails = () => {
   // Save and share QR code image
   const saveAndShareQRCode = async () => {
     if (!viewShotRef.current) return;
-
+  
     try {
       setQrSharingInProgress(true);
-
+  
       // Capture the view as an image
       const uri = await viewShotRef.current.capture();
-
-      // Share the image
-      if (Platform.OS === "android") {
-        const fileUri = `${FileSystem.cacheDirectory}reservation_qr_${id}.png`;
-        await FileSystem.copyAsync({
-          from: uri,
-          to: fileUri,
-        });
-
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(fileUri, {
-            mimeType: "image/png",
-            dialogTitle: "Share Reservation QR Code",
-          });
+      
+      // Check if we're on web platform
+      if (Platform.OS === "web") {
+        // For web, use Web Share API if available
+        if (navigator.share && uri) {
+          try {
+            // For web, we need to convert the image to a blob to share it
+            const response = await fetch(uri);
+            const blob = await response.blob();
+            const file = new File([blob], `reservation-${id}.png`, { type: 'image/png' });
+            
+            await navigator.share({
+              title: 'Reservation QR Code',
+              text: 'Here is my reservation QR Code',
+              files: [file]
+            });
+          } catch (webShareError) {
+            // Web Share API might not support sharing files in all browsers
+            // Fallback to sharing just the URI if possible
+            try {
+              await navigator.share({
+                title: 'Reservation QR Code',
+                text: 'Here is my reservation QR Code',
+                url: uri
+              });
+            } catch (fallbackError) {
+              console.log("Web sharing not fully supported:", fallbackError);
+              
+              // Fallback option: open in new tab so user can save/share manually
+              const newTab = window.open();
+              if (newTab) {
+                newTab.document.write(`<img src="${uri}" alt="Reservation QR Code" style="max-width:100%"/>`);
+                newTab.document.title = "Reservation QR Code";
+              } else {
+                alert("Unable to share. Please try saving the image manually.");
+              }
+            }
+          }
         } else {
-          Alert.alert(
-            "Sharing not available",
-            "Sharing is not available on this device"
-          );
+          // If Web Share API is not available, open in new tab
+          const newTab = window.open();
+          if (newTab) {
+            newTab.document.write(`<img src="${uri}" alt="Reservation QR Code" style="max-width:100%"/>`);
+            newTab.document.title = "Reservation QR Code";
+          } else {
+            alert("Unable to share. Please try saving the image manually.");
+          }
+        }
+      } else if (uri) {
+        // Handle native platforms (iOS and Android)
+        
+        if (Platform.OS === "android") {
+          const fileUri = `${FileSystem.cacheDirectory}reservation_qr_${id}.png`;
+          await FileSystem.copyAsync({
+            from: uri,
+            to: fileUri,
+          });
+  
+          if (await Sharing.isAvailableAsync()) {
+            await Sharing.shareAsync(fileUri, {
+              mimeType: "image/png",
+              dialogTitle: "Share Reservation QR Code",
+            });
+          } else {
+            Alert.alert(
+              "Sharing not available",
+              "Sharing is not available on this device"
+            );
+          }
+        } else {
+          // iOS handling
+          
+          if (uri.startsWith('file://')) {
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(uri, {
+                mimeType: "image/png",
+                UTI: "public.png", // Specific to iOS
+                dialogTitle: "Share Reservation QR Code",
+              });
+            } else {
+              Alert.alert(
+                "Sharing not available",
+                "Sharing is not available on this device"
+              );
+            }
+          } else {
+            // If the URI is not a file URI, save it to a file first
+            const fileUri = `${FileSystem.cacheDirectory}reservation_qr_${id}.png`;
+            await FileSystem.copyAsync({
+              from: uri,
+              to: fileUri,
+            });
+            
+            if (await Sharing.isAvailableAsync()) {
+              await Sharing.shareAsync(fileUri, {
+                mimeType: "image/png",
+                UTI: "public.png",
+                dialogTitle: "Share Reservation QR Code",
+              });
+            }
+          }
         }
       } else {
-        // iOS can share directly from the uri
-        if (await Sharing.isAvailableAsync()) {
-          await Sharing.shareAsync(uri, {
-            mimeType: "image/png",
-            dialogTitle: "Share Reservation QR Code",
-          });
-        }
+        throw new Error("Failed to capture QR code image");
       }
     } catch (error) {
-      console.error("Error sharing QR code:", error);
-      Alert.alert("Error", "Failed to share QR code");
+      console.log("Error sharing QR code:", error);
+      
+      // Use Alert on native platforms and window.alert on web
+      if (Platform.OS === "web") {
+        alert("Failed to share QR code");
+      } else {
+        Alert.alert("Error", "Failed to share QR code");
+      }
     } finally {
       setQrSharingInProgress(false);
     }
@@ -190,62 +376,39 @@ const ReservationDetails = () => {
 
   // Handle reservation cancellation
   const handleCancelReservation = async () => {
-    Alert.alert(
+    showPlatformAlert(
       "Cancel Reservation",
-      "Are you sure you want to cancel this reservation?",
-      [
-        {
-          text: "No",
-          style: "cancel",
-        },
-        {
-          text: "Yes, Cancel",
-          style: "destructive",
-          onPress: async () => {
-            try {
-              setCancelling(true);
-              const result = await RestaurantAPI.cancelReservation(id);
-
-              if (result.success) {
-                Alert.alert(
-                  "Reservation Cancelled",
-                  "Your reservation has been successfully cancelled.",
-                  [
-                    {
-                      text: "OK",
-                      onPress: () => router.back(),
-                    },
-                  ]
-                );
-              } else {
-                throw new Error(result.error || "Failed to cancel reservation");
-              }
-            } catch (err) {
-              console.error("Error cancelling reservation:", err);
-              Alert.alert(
-                "Error",
-                err.message || "Failed to cancel reservation"
-              );
-            } finally {
-              setCancelling(false);
-            }
-          },
-        },
-      ]
+      Platform.OS === "web" 
+        ? "Are you sure you want to cancel this reservation?\n\nThis action cannot be undone."
+        : "Are you sure you want to cancel this reservation?",
+      async () => {
+        try {
+          setCancelling(true);
+          const result = await RestaurantAPI.cancelReservation(id);
+  
+          if (result.success) {
+            showPlatformAlert(
+              "Reservation Cancelled",
+              "Your reservation has been successfully cancelled.",
+              () => router.back()
+            );
+          } else {
+            throw new Error(result.error || "Failed to cancel reservation");
+          }
+        } catch (err) {
+          console.log("Error cancelling reservation:", err);
+          showPlatformAlert(
+            "Error",
+            err.message || "Failed to cancel reservation"
+          );
+        } finally {
+          setCancelling(false);
+        }
+      },
+      () => {} // Cancel handler
     );
   };
-
-  if (loading) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#1a1a1a" />
-          <Text style={styles.loadingText}>Loading reservation details...</Text>
-        </View>
-      </SafeAreaView>
-    );
-  }
-
+  
   if (error) {
     return (
       <SafeAreaView style={styles.container}>
@@ -323,6 +486,7 @@ const ReservationDetails = () => {
         </View>
 
         {/* Restaurant Info */}
+       
         {restaurant && (
           <TouchableOpacity
             style={styles.restaurantCard}

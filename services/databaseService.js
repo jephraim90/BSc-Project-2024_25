@@ -1,4 +1,3 @@
-// services/databaseService.js
 import { 
     collection, 
     doc, 
@@ -33,7 +32,7 @@ import {
           error: null 
         };
       } catch (error) {
-        console.error("Error creating document:", error);
+        console.log("Error creating document:", error);
         return { 
           id: null, 
           success: false, 
@@ -68,7 +67,7 @@ import {
           error: null 
         };
       } catch (error) {
-        console.error("Error fetching documents:", error);
+        console.log("Error fetching documents:", error);
         return { 
           data: [], 
           success: false, 
@@ -96,7 +95,7 @@ import {
           };
         }
       } catch (error) {
-        console.error("Error fetching document:", error);
+        console.log("Error fetching document:", error);
         return { 
           data: null, 
           success: false, 
@@ -108,23 +107,23 @@ import {
     async updateDocument(collectionName, documentId, data) {
       try {
         const docRef = doc(db, collectionName, documentId);
-        
+  
         // Add updated timestamp
         const dataWithTimestamp = {
           ...data,
           updatedAt: serverTimestamp()
         };
-        
+  
         await updateDoc(docRef, dataWithTimestamp);
-        return { 
-          success: true, 
-          error: null 
+        return {
+          success: true,
+          error: null
         };
       } catch (error) {
-        console.error("Error updating document:", error);
-        return { 
-          success: false, 
-          error: error.message 
+        console.log(`Error updating document in collection "${collectionName}" with ID "${documentId}":`, error);
+        return {
+          success: false,
+          error: `Error updating document with ID "${documentId}": ${error.message}`
         };
       }
     },
@@ -138,7 +137,7 @@ import {
           error: null 
         };
       } catch (error) {
-        console.error("Error deleting document:", error);
+        console.log("Error deleting document:", error);
         return { 
           success: false, 
           error: error.message 

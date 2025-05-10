@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "319664873623",
+    "project_id": "dineconnect-6aeba",
+    "storage_bucket": "dineconnect-6aeba.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:319664873623:android:c71c87b43d277f1db789d2",
+        "android_client_info": {
+          "package_name": "com.dineconnect.android"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCET5-utL_Mt7nnA4OgVOwsNifRqtnEdDE"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

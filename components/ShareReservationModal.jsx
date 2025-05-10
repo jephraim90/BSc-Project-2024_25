@@ -28,39 +28,80 @@ import {
     const [error, setError] = useState('');
     
     const handleShare = async () => {
-    
       if (!email || !email.includes('@') || !email.includes('.')) {
         setError('Please enter a valid email address');
         return;
       }
-      
+    
       setError('');
       setLoading(true);
-      
+    
       try {
         const result = await reservationSharingService.shareReservation(
           reservationId,
           email,
           userId
         );
-        
+    
         if (result.success) {
-          Alert.alert(
+          showPlatformAlert(
             'Invitation Sent',
             `Reservation shared with ${email} successfully!`,
-            [{ text: 'OK', onPress: () => {
+            () => {
               setEmail('');
               onClose();
-            }}]
+            }
           );
         } else {
           throw new Error(result.error || 'Failed to share reservation');
         }
       } catch (err) {
-        console.error('Error sharing reservation:', err);
+        console.log('Error sharing reservation:', err);
+        showPlatformAlert(
+          'Error',
+          err.message || 'Something went wrong. Please try again.'
+        );
         setError(err.message || 'Something went wrong. Please try again.');
       } finally {
         setLoading(false);
+      }
+    };
+    
+   
+    const showPlatformAlert = (
+      title,
+      message,
+      confirmAction,
+      cancelAction = () => {}
+    ) => {
+      if (Platform.OS === "web") {
+        if (confirmAction) {
+          const isConfirmed = window.confirm(`${title}\n\n${message}`);
+          isConfirmed ? confirmAction() : cancelAction();
+        } else {
+          window.alert(`${title}\n\n${message}`);
+        }
+      } else {
+        if (confirmAction) {
+          Alert.alert(
+            title,
+            message,
+            [
+              {
+                text: "Cancel",
+                style: "cancel",
+                onPress: cancelAction,
+              },
+              {
+                text: "OK",  
+                onPress: confirmAction,
+              },
+            ],
+            { cancelable: false }
+          );
+        } else {
+          Alert.alert(title, message);
+        }
       }
     };
     
